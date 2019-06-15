@@ -51,7 +51,7 @@
     (if handler (handler))))
 
 (define (load)
-  (set! sprite (load-image "/home/milo/chickadee-0.4.0/chickadee.png")))
+  (set! sprite (load-image "assets/images/chickadee.png")))
 
 (define (draw alpha)
   (draw-sprite sprite sprite-pos))
