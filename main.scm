@@ -40,15 +40,15 @@
 (define (deg->rad d)
   (* (/ PI 180) d))
 
-(define (create-bullet pos dir)
-  (let ((bullet (make-hash-table)))
-    (hash-set! bullet 'pos pos)
-    (hash-set! bullet 'dir dir)
-    (hash-set! bullet 'decay 10)
-    bullet))
+(define (create-entity sprite pos dir)
+  (let ((entity (make-hash-table)))
+    (hash-set! entity 'sprite sprite)
+    (hash-set! entity 'pos pos)
+    (hash-set! entity 'dir dir)
+    entity))
 
 (define (spawn-bullet! pos dir)
-  (set! bullets (cons (create-bullet pos dir) bullets)))
+  (set! bullets (cons (create-entity bullet-sprite pos dir) bullets)))
 
 (define (get-direction rad)
   "Get direction vector from radians IDK"
@@ -98,13 +98,17 @@
   (let ((handler (hash-ref key-release-handlers key)))
     (if handler (handler))))
 
+(define (draw-entity entity)
+  (draw-sprite
+   (hash-ref entity 'sprite)
+   (hash-ref entity 'pos)))
+
 (define (load)
   (set! sprite (load-image "assets/images/chickadee.png"))
   (set! bullet-sprite (load-image "assets/images/dot.png")))
 
 (define (game-draw alpha)
-  (for-each (lambda (bullet)
-              (draw-sprite bullet-sprite (hash-ref bullet 'pos ))) bullets)
+  (for-each draw-entity bullets)
   (draw-sprite sprite sprite-pos #:rotation sprite-rotation #:origin #v(sprite-hw sprite-hh)))
 
 (define (game-update dt)
@@ -146,3 +150,4 @@
   (abort-game))
 
 (start!)
+(reset!)
