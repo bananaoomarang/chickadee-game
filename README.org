@@ -1,0 +1,11 @@
+* Guile Asteroids (WIP)
+
+Some fun with the [[https://dthompson.us/projects/chickadee.html][Chickadee]]. 
+
+First install Chickadee + make sure everything is in your GUILE_LOAD_COMPILE_PATH then you can run:
+
+#+BEGIN_SRC
+$ guile main.scm
+#+END_SRC
+
+This also starts a REPL inside the game process/world, which you can connect to with Geiser in Emacs (geiser-connect).
