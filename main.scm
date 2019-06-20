@@ -16,16 +16,12 @@
 
 (define BULLET-SPEED 300)
 
-(define bird #f)
 (define bird-hw 64)
 (define bird-hh 64)
-(define bird-angular 0.0)
-(define bird-rotation 0.0)
-(define bird-acc 0.0)
-(define bird-vel #v(0.0 0.0))
-(define bird-pos #v(100.0 100.0))
 
-(define bullet-bird #f)
+(define bird-sprite #f)
+(define bullet-sprite #f)
+(define asteroid-sprite #f)
 
 (define bullets '())
 
@@ -40,15 +36,26 @@
 (define (deg->rad d)
   (* (/ PI 180) d))
 
-(define (create-entity bird pos dir)
-  (let ((entity (make-hash-table)))
-    (hash-set! entity 'bird bird)
-    (hash-set! entity 'pos pos)
-    (hash-set! entity 'dir dir)
-    entity))
+(define* (create-entity sprite pos dir
+                        #:key
+                        (origin #v(0 0))
+                        (rotation 0)
+                        (speed 0)
+                        (velocity #v(0 0))
+                        (accel 0)
+                        (angular-vel 0))
+  (list (cons 'sprite sprite)
+        (cons 'pos pos)
+        (cons 'dir dir)
+        (cons 'origin origin)
+        (cons 'speed speed)
+        (cons 'velocity velocity)
+        (cons 'accel accel)
+        (cons 'angular-vel angular-vel)
+        (cons 'rotation rotation)))
 
 (define (spawn-bullet! pos dir)
-  (set! bullets (cons (create-entity bullet-bird pos dir) bullets)))
+  (set! bullets (cons (create-entity bullet-sprite pos dir #:speed BULLET-SPEED) bullets)))
 
 (define (get-direction rad)
   "Get direction vector from radians IDK"
@@ -57,27 +64,38 @@
   (let ((-rad (* -1 rad)))
     #v((sin -rad) (cos -rad))))
 
+(define (update-entity! entity dt)
+  (let ((rotation (assoc-ref entity 'rotation))
+        (dir (assoc-ref entity 'dir))
+        (angular-vel (assoc-ref entity 'angular-vel))
+        (velocity (assoc-ref entity 'velocity))
+        (accel (assoc-ref entity 'accel))
+        (pos (assoc-ref entity 'pos)))
+
+    (assoc-set! entity 'rotation (+ rotation (* dt angular-vel)))
+    (vec2-add! velocity (vec2* dir accel))
+
+    (set-vec2-x! pos (+ (vec2-x pos) (* dt (vec2-x velocity))))
+    (set-vec2-y! pos (+ (vec2-y pos) (* dt (vec2-y velocity))))))
+
+(define bird #f)
+
 (define (bird-update! dt)
-  (set! bird-rotation (+ bird-rotation (* dt bird-angular)))
-
-  (vec2-add! bird-vel (vec2* (get-direction bird-rotation) bird-acc))
-
-  (set-vec2-x! bird-pos (+ (vec2-x bird-pos) (* dt (vec2-x bird-vel))))
-  (set-vec2-y! bird-pos (+ (vec2-y bird-pos) (* dt (vec2-y bird-vel)))))
+  (assoc-set! bird 'dir (get-direction (assoc-ref bird 'rotation))))
 
 (define (bullets-update! dt)
   (for-each (lambda (bullet)
-              (vec2-add! (hash-ref bullet 'pos) (vec2* (hash-ref bullet 'dir) (* dt BULLET-SPEED))))
+              (vec2-add! (assoc-ref bullet 'pos) (vec2* (assoc-ref bullet 'dir) (* dt (assoc-ref bullet 'speed)))))
             bullets))
 
 (define (bird-rot! n)
-  (set! bird-angular (+ n bird-angular)))
+  (assoc-set! bird 'angular-vel (+ n (assoc-ref bird 'angular-vel))))
 
 (define (shoot!)
-  (spawn-bullet! (vec2-copy bird-pos) (get-direction bird-rotation)))
+  (spawn-bullet! (vec2-copy (assoc-ref bird 'pos)) (get-direction (assoc-ref bird 'rotation))))
 
 (define key-press-handlers (make-hash-table))
-(hash-set! key-press-handlers 'up (lambda () (set! bird-acc BIRD-SPEED)))
+(hash-set! key-press-handlers 'up (lambda () (assoc-set! bird 'accel BIRD-SPEED)))
 
 (hash-set! key-press-handlers 'left (lambda () (bird-rot! BIRD-ANG-SPEED)))
 (hash-set! key-press-handlers 'right (lambda () (bird-rot! (* -1 BIRD-ANG-SPEED))))
@@ -85,7 +103,7 @@
 (hash-set! key-press-handlers 'space shoot!)
 
 (define key-release-handlers (make-hash-table))
-(hash-set! key-release-handlers 'up (lambda () (set! bird-acc 0.0)))
+(hash-set! key-release-handlers 'up (lambda () (assoc-set! bird 'accel BIRD-SPEED)))
 
 (hash-set! key-release-handlers 'left (lambda () (bird-rot! (* -1 BIRD-ANG-SPEED))))
 (hash-set! key-release-handlers 'right (lambda () (bird-rot! BIRD-ANG-SPEED)))
@@ -100,21 +118,25 @@
 
 (define (draw-entity entity)
   (draw-sprite
-   (hash-ref entity 'bird)
-   (hash-ref entity 'pos)))
+   (assoc-ref entity 'sprite)
+   (assoc-ref entity 'pos)
+   #:rotation (assoc-ref entity 'rotation)
+   #:origin (assoc-ref entity 'origin)))
 
 (define (load)
-  (set! bird (load-image "assets/images/chickadee.png"))
-  (set! bullet-bird (load-image "assets/images/dot.png")))
+  (set! bird-sprite (load-image "assets/images/chickadee.png"))
+  (set! bullet-sprite (load-image "assets/images/dot.png"))
+  (set! bird (create-entity bird-sprite #v(100 100) #v(0 0) #:speed BIRD-SPEED #:origin #v(bird-hw bird-hh))))
 
 (define (game-draw alpha)
-  (for-each draw-entity bullets)
-  (draw-sprite bird bird-pos #:rotation bird-rotation #:origin #v(bird-hw bird-hh)))
+  (draw-entity bird)
+  (for-each draw-entity bullets))
 
 (define (game-update dt)
   (let ((dt-seconds (/ dt 1000.0)))
     (bullets-update! dt-seconds)
-    (bird-update! dt-seconds)))
+    (update-entity! bird dt-seconds)
+    (bird-update! dt)))
 
 (define (draw alpha)
   "Call the game draw function but don't let it crash"
