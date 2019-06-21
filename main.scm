@@ -132,11 +132,18 @@
      (left? (assoc-set! bird 'angular-vel BIRD-ANG-SPEED))
      (right? (assoc-set! bird 'angular-vel (* -1 BIRD-ANG-SPEED))))))
 
+(define shot #f)
 (define (handle-shoot! key-state)
   "Shoot if they tap space"
 
   (let ((space? (assoc-ref key-state 'space)))
-    (if space? (shoot!))))
+    (if (and space? (not shot))
+        (begin
+          (shoot!)
+          (set! shot #t)))
+
+    (if (not space?)
+        (set! shot #f))))
 
 ;; Lambdas are for hot reloading...
 (define key-handlers
