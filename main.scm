@@ -8,8 +8,10 @@
 
 (define repl (spawn-coop-repl-server))
 
-(define window-width 1280)
-(define window-height 960)
+;;(define window-width 1280)
+;;(define window-height 960)
+(define window-width 800)
+(define window-height 600)
 (define PI 3.14159265359)
 (define BIRD-SPEED 10.0)
 (define BIRD-ANG-SPEED 5.0)
@@ -91,32 +93,56 @@
             bullets))
 
 (define (bird-rot! n)
-  (assoc-set! bird 'angular-vel (+ n (assoc-ref bird 'angular-vel))))
+  (let ((angular-vel (assoc-ref bird 'angular-vel)))
+        (if (<= (abs (+ n angular-vel)) BIRD-ANG-SPEED)
+            (assoc-set! bird 'angular-vel (+ n angular-vel))
+            (pretty-print angular-vel))))
 
 (define (shoot!)
   (spawn-bullet! (vec2-copy (assoc-ref bird 'pos)) (get-direction (assoc-ref bird 'rotation))))
 
 (define key-press-handlers (make-hash-table))
-(hash-set! key-press-handlers 'up (lambda () (assoc-set! bird 'accel BIRD-SPEED)))
-
-(hash-set! key-press-handlers 'left (lambda () (bird-rot! BIRD-ANG-SPEED)))
-(hash-set! key-press-handlers 'right (lambda () (bird-rot! (* -1 BIRD-ANG-SPEED))))
-
 (hash-set! key-press-handlers 'space shoot!)
 
-(define key-release-handlers (make-hash-table))
-(hash-set! key-release-handlers 'up (lambda () (assoc-set! bird 'accel 0)))
-
-(hash-set! key-release-handlers 'left (lambda () (bird-rot! (* -1 BIRD-ANG-SPEED))))
-(hash-set! key-release-handlers 'right (lambda () (bird-rot! BIRD-ANG-SPEED)))
+(define key-state (list
+                   (cons 'space #f)
+                   (cons 'up #f)
+                   (cons 'left #f)
+                   (cons 'right #f)))
 
 (define (key-press key scancode modifiers repeat?)
-  (let ((handler (hash-ref key-press-handlers key)))
-    (if (and handler (not repeat?)) (handler))))
+  (assoc-set! key-state key #t))
 
 (define (key-release key scancode modifiers)
-  (let ((handler (hash-ref key-release-handlers key)))
-    (if handler (handler))))
+  (assoc-set! key-state key #f))
+
+(define (handle-move-bird! key-state)
+  "Move the bird if they click the arrows!"
+
+  (let ((left?  (assoc-ref key-state 'left))
+        (right? (assoc-ref key-state 'right))
+        (up?    (assoc-ref key-state 'up)))
+    (if up?
+        (assoc-set! bird 'accel BIRD-SPEED)
+        (assoc-set! bird 'accel 0))
+
+    (cond
+     ((and left? right?) (assoc-set! bird 'angular-vel 0))
+     ((and (not left?) (not right?)) (assoc-set! bird 'angular-vel 0))
+     (left? (assoc-set! bird 'angular-vel BIRD-ANG-SPEED))
+     (right? (assoc-set! bird 'angular-vel (* -1 BIRD-ANG-SPEED))))))
+
+(define (handle-shoot! key-state)
+  "Shoot if they tap space"
+
+  (let ((space? (assoc-ref key-state 'space)))
+    (if space? (shoot!))))
+
+;; Lambdas are for hot reloading...
+(define key-handlers
+  (list
+   (lambda (s) (handle-move-bird! s))
+   (lambda (s) (handle-shoot! s))))
 
 (define (draw-entity entity)
   (draw-sprite
@@ -138,6 +164,7 @@
   (let ((dt-seconds (/ dt 1000.0)))
     (for-each (lambda (bullet) (update-entity! bullet dt-seconds)) bullets)
     ;;(bullets-update! dt-seconds)
+    (for-each (lambda (h) (h key-state)) key-handlers )
     (update-entity! bird dt-seconds)
     (bird-update! dt)))
 
