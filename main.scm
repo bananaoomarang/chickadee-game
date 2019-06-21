@@ -24,14 +24,15 @@
 (define asteroid-sprite #f)
 
 (define bullets '())
+(define asteroids '())
 
 (define (reset!)
-  (set! bird-angular 0.0)
-  (set! bird-rotation 0.0)
-  (set! bird-acc 0.0)
+  (assoc-set! bird 'angular-vel 0.0)
+  (assoc-set! bird 'rotation 0.0)
+  (assoc-set! bird 'accel 0.0)
   (set! bullets '())
-  (set-vec2! bird-vel 0.0 0.0)
-  (set-vec2! bird-pos 600.0 100.0))
+  (set-vec2! (assoc-ref bird 'velocity) 0.0 0.0)
+  (set-vec2! (assoc-ref bird 'pos) 600.0 100.0))
 
 (define (deg->rad d)
   (* (/ PI 180) d))
@@ -55,7 +56,7 @@
         (cons 'rotation rotation)))
 
 (define (spawn-bullet! pos dir)
-  (set! bullets (cons (create-entity bullet-sprite pos dir #:speed BULLET-SPEED) bullets)))
+  (set! bullets (cons (create-entity bullet-sprite pos dir #:velocity (vec2* dir #v(BULLET-SPEED BULLET-SPEED))) bullets)))
 
 (define (get-direction rad)
   "Get direction vector from radians IDK"
@@ -73,6 +74,7 @@
         (pos (assoc-ref entity 'pos)))
 
     (assoc-set! entity 'rotation (+ rotation (* dt angular-vel)))
+
     (vec2-add! velocity (vec2* dir accel))
 
     (set-vec2-x! pos (+ (vec2-x pos) (* dt (vec2-x velocity))))
@@ -103,7 +105,7 @@
 (hash-set! key-press-handlers 'space shoot!)
 
 (define key-release-handlers (make-hash-table))
-(hash-set! key-release-handlers 'up (lambda () (assoc-set! bird 'accel BIRD-SPEED)))
+(hash-set! key-release-handlers 'up (lambda () (assoc-set! bird 'accel 0)))
 
 (hash-set! key-release-handlers 'left (lambda () (bird-rot! (* -1 BIRD-ANG-SPEED))))
 (hash-set! key-release-handlers 'right (lambda () (bird-rot! BIRD-ANG-SPEED)))
@@ -134,7 +136,8 @@
 
 (define (game-update dt)
   (let ((dt-seconds (/ dt 1000.0)))
-    (bullets-update! dt-seconds)
+    (for-each (lambda (bullet) (update-entity! bullet dt-seconds)) bullets)
+    ;;(bullets-update! dt-seconds)
     (update-entity! bird dt-seconds)
     (bird-update! dt)))
 
