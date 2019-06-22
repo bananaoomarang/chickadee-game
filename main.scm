@@ -18,6 +18,8 @@
 
 (define BULLET-SPEED 300)
 
+(define MAX-ASTEROID-SPEED 200)
+
 (define bird-hw 64)
 (define bird-hh 64)
 
@@ -34,6 +36,7 @@
   (assoc-set! bird 'rotation 0.0)
   (assoc-set! bird 'accel 0.0)
   (set! bullets '())
+  (set! asteroids '())
   (set-vec2! (assoc-ref bird 'velocity) 0.0 0.0)
   (set-vec2! (assoc-ref bird 'pos) 600.0 100.0))
 
@@ -60,7 +63,16 @@
 (define (spawn-bullet! pos dir)
   (set! bullets
     (cons
-     (create-entity bullet-sprite pos #:velocity (vec2* dir #v(BULLET-SPEED BULLET-SPEED))) bullets)))
+     (create-entity bullet-sprite pos #:velocity (vec2* dir BULLET-SPEED)) bullets)))
+
+(define (spawn-asteroid!)
+  (let ((pos (vec2 (random window-width) (random window-height)))
+        (vel (vec2
+              (- (random MAX-ASTEROID-SPEED) (random (* 2 MAX-ASTEROID-SPEED)))
+              (- (random MAX-ASTEROID-SPEED) (random (* 2 MAX-ASTEROID-SPEED))))))
+    (set! asteroids
+      (cons
+       (create-entity asteroid-sprite pos #:velocity vel) asteroids))))
 
 (define (get-direction rad)
   "Get direction vector from radians IDK"
@@ -75,6 +87,12 @@
         (velocity (assoc-ref entity 'velocity))
         (accel (assoc-ref entity 'accel))
         (pos (assoc-ref entity 'pos)))
+
+    (if (< (vec2-x pos) 0) (set-vec2-x! pos window-width))
+    (if (< (vec2-y pos) 0) (set-vec2-y! pos window-height))
+
+    (if (> (vec2-x pos) window-width) (set-vec2-x! pos 0))
+    (if (> (vec2-y pos) window-height) (set-vec2-y! pos 0))
 
     (assoc-set! entity 'rotation (+ rotation (* dt angular-vel)))
 
@@ -159,15 +177,15 @@
 
 (define (game-draw alpha)
   (draw-entity bird)
-  (for-each draw-entity bullets))
+  (for-each draw-entity bullets)
+  (for-each draw-entity asteroids))
 
 (define (game-update dt)
   (let ((dt-seconds (/ dt 1000.0)))
     (for-each (lambda (bullet) (update-entity! bullet dt-seconds)) bullets)
+    (for-each (lambda (asteroid) (update-entity! asteroid dt-seconds)) asteroids)
     (for-each (lambda (h) (h key-state)) key-handlers )
-    (update-entity! bird dt-seconds)
-    ;;(bird-update! dt)
-    ))
+    (update-entity! bird dt-seconds)))
 
 (define (draw alpha)
   "Call the game draw function but don't let it crash"
