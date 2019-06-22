@@ -4,9 +4,12 @@
  (chickadee)
  (chickadee math vector)
  (chickadee math rect)
+ (chickadee render)
  (chickadee render sprite)
  (chickadee render texture)
  (chickadee render font)
+ (chickadee render color)
+ (chickadee render viewport)
  (chickadee scripting))
 
 (define repl (spawn-coop-repl-server))
@@ -34,6 +37,11 @@
 (define bullets '())
 (define asteroids '())
 (define score 0)
+
+
+(define black (make-color 0.0 0.0 0.0 1.0))
+(define main-viewport
+  (make-viewport 0 0 window-width window-height #:clear-color black))
 
 (define (reset!)
   (assoc-set! bird 'angular-vel 0.0)
@@ -227,7 +235,9 @@
   "Call the game draw function but don't let it crash"
 
   (catch #t
-    (lambda () (game-draw alpha))
+    (lambda ()
+      (with-viewport main-viewport 
+                     (game-draw alpha)))
     (lambda (key . parameters)
       (pretty-print key)
       (pretty-print parameters))))
