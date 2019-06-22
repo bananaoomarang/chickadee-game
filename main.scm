@@ -3,8 +3,10 @@
  (ice-9 pretty-print)
  (chickadee)
  (chickadee math vector)
+ (chickadee math rect)
  (chickadee render sprite)
- (chickadee render texture))
+ (chickadee render texture)
+ (chickadee scripting))
 
 (define repl (spawn-coop-repl-server))
 
@@ -50,7 +52,8 @@
                         (speed 0)
                         (velocity #v(0 0))
                         (accel #v(0 0))
-                        (angular-vel 0))
+                        (angular-vel 0)
+                        (scale #v(1 1)))
   (list (cons 'sprite sprite)
         (cons 'pos pos)
         (cons 'origin origin)
@@ -58,7 +61,15 @@
         (cons 'velocity velocity)
         (cons 'accel accel)
         (cons 'angular-vel angular-vel)
-        (cons 'rotation rotation)))
+        (cons 'rotation rotation)
+        (cons 'scale scale)
+        (cons 'aabb (rect (vec2-x pos) (vec2-y pos)
+                          (texture-width sprite) (texture-height sprite)))))
+
+(define (collides? entity-a entity-b)
+  (rect-intersects?
+   (assoc-ref entity-a 'aabb)
+   (assoc-ref entity-b 'aabb)))
 
 (define (spawn-bullet! pos dir)
   (set! bullets
@@ -86,7 +97,8 @@
         (angular-vel (assoc-ref entity 'angular-vel))
         (velocity (assoc-ref entity 'velocity))
         (accel (assoc-ref entity 'accel))
-        (pos (assoc-ref entity 'pos)))
+        (pos (assoc-ref entity 'pos))
+        (aabb (assoc-ref entity 'aabb)))
 
     (if (< (vec2-x pos) 0) (set-vec2-x! pos window-width))
     (if (< (vec2-y pos) 0) (set-vec2-y! pos window-height))
@@ -99,7 +111,10 @@
     (vec2-add! velocity accel)
 
     (set-vec2-x! pos (+ (vec2-x pos) (* dt (vec2-x velocity))))
-    (set-vec2-y! pos (+ (vec2-y pos) (* dt (vec2-y velocity))))))
+    (set-vec2-y! pos (+ (vec2-y pos) (* dt (vec2-y velocity))))
+
+    (set-rect-x! aabb (vec2-x pos))
+    (set-rect-y! aabb (vec2-y pos))))
 
 (define (bird-rot! n)
   (let ((angular-vel (assoc-ref bird 'angular-vel)))
@@ -156,6 +171,16 @@
     (if (not space?)
         (set! shot #f))))
 
+(define (update-bullet! bullet dt)
+  (update-entity! bullet dt)
+  (for-each
+   (lambda (asteroid)
+     (if (collides? bullet asteroid)
+         (begin
+           (set! bullets (delete bullet bullets))
+           (set! asteroids (delete asteroid asteroids)))))
+   asteroids))
+
 ;; Lambdas are for hot reloading...
 (define key-handlers
   (list
@@ -167,13 +192,17 @@
    (assoc-ref entity 'sprite)
    (assoc-ref entity 'pos)
    #:rotation (assoc-ref entity 'rotation)
-   #:origin (assoc-ref entity 'origin)))
+   #:origin (assoc-ref entity 'origin)
+   #:scale (assoc-ref entity 'scale)))
 
 (define (load)
   (set! bird-sprite (load-image "assets/images/chickadee.png"))
   (set! bullet-sprite (load-image "assets/images/dot.png"))
   (set! asteroid-sprite (load-image "assets/images/asteroid.png"))
-  (set! bird (create-entity bird-sprite #v(100 100) #:speed BIRD-SPEED #:origin #v(bird-hw bird-hh))))
+  (set! bird (create-entity bird-sprite #v(100 100)
+                            #:speed BIRD-SPEED
+                            #:origin #v(bird-hw bird-hh)
+                            #:scale #v(0.75 0.75))))
 
 (define (game-draw alpha)
   (draw-entity bird)
@@ -182,9 +211,11 @@
 
 (define (game-update dt)
   (let ((dt-seconds (/ dt 1000.0)))
-    (for-each (lambda (bullet) (update-entity! bullet dt-seconds)) bullets)
-    (for-each (lambda (asteroid) (update-entity! asteroid dt-seconds)) asteroids)
+    (update-agenda dt)
+
     (for-each (lambda (h) (h key-state)) key-handlers )
+    (for-each (lambda (bullet) (update-bullet! bullet dt-seconds)) bullets)
+    (for-each (lambda (asteroid) (update-entity! asteroid dt-seconds)) asteroids)
     (update-entity! bird dt-seconds)))
 
 (define (draw alpha)
@@ -222,3 +253,11 @@
 
 (start!)
 (reset!)
+
+(define spawn-asteroid-script
+  (script
+   (while #t
+     (spawn-asteroid!)
+     (sleep 5000))))
+
+(cancel-script spawn-asteroid-script)
