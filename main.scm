@@ -25,6 +25,7 @@
 (define bullet-sprite #f)
 (define asteroid-sprite #f)
 
+(define bird #f)
 (define bullets '())
 (define asteroids '())
 
@@ -39,17 +40,16 @@
 (define (deg->rad d)
   (* (/ PI 180) d))
 
-(define* (create-entity sprite pos dir
+(define* (create-entity sprite pos
                         #:key
                         (origin #v(0 0))
                         (rotation 0)
                         (speed 0)
                         (velocity #v(0 0))
-                        (accel 0)
+                        (accel #v(0 0))
                         (angular-vel 0))
   (list (cons 'sprite sprite)
         (cons 'pos pos)
-        (cons 'dir dir)
         (cons 'origin origin)
         (cons 'speed speed)
         (cons 'velocity velocity)
@@ -58,7 +58,9 @@
         (cons 'rotation rotation)))
 
 (define (spawn-bullet! pos dir)
-  (set! bullets (cons (create-entity bullet-sprite pos dir #:velocity (vec2* dir #v(BULLET-SPEED BULLET-SPEED))) bullets)))
+  (set! bullets
+    (cons
+     (create-entity bullet-sprite pos #:velocity (vec2* dir #v(BULLET-SPEED BULLET-SPEED))) bullets)))
 
 (define (get-direction rad)
   "Get direction vector from radians IDK"
@@ -69,7 +71,6 @@
 
 (define (update-entity! entity dt)
   (let ((rotation (assoc-ref entity 'rotation))
-        (dir (assoc-ref entity 'dir))
         (angular-vel (assoc-ref entity 'angular-vel))
         (velocity (assoc-ref entity 'velocity))
         (accel (assoc-ref entity 'accel))
@@ -77,20 +78,10 @@
 
     (assoc-set! entity 'rotation (+ rotation (* dt angular-vel)))
 
-    (vec2-add! velocity (vec2* dir accel))
+    (vec2-add! velocity accel)
 
     (set-vec2-x! pos (+ (vec2-x pos) (* dt (vec2-x velocity))))
     (set-vec2-y! pos (+ (vec2-y pos) (* dt (vec2-y velocity))))))
-
-(define bird #f)
-
-(define (bird-update! dt)
-  (assoc-set! bird 'dir (get-direction (assoc-ref bird 'rotation))))
-
-(define (bullets-update! dt)
-  (for-each (lambda (bullet)
-              (vec2-add! (assoc-ref bullet 'pos) (vec2* (assoc-ref bullet 'dir) (* dt (assoc-ref bullet 'speed)))))
-            bullets))
 
 (define (bird-rot! n)
   (let ((angular-vel (assoc-ref bird 'angular-vel)))
@@ -123,7 +114,9 @@
         (right? (assoc-ref key-state 'right))
         (up?    (assoc-ref key-state 'up)))
     (if up?
-        (assoc-set! bird 'accel BIRD-SPEED)
+        (assoc-set! bird 'accel (vec2*
+                                 (get-direction (assoc-ref bird 'rotation))
+                                 BIRD-SPEED))
         (assoc-set! bird 'accel 0))
 
     (cond
@@ -161,7 +154,8 @@
 (define (load)
   (set! bird-sprite (load-image "assets/images/chickadee.png"))
   (set! bullet-sprite (load-image "assets/images/dot.png"))
-  (set! bird (create-entity bird-sprite #v(100 100) #v(0 0) #:speed BIRD-SPEED #:origin #v(bird-hw bird-hh))))
+  (set! asteroid-sprite (load-image "assets/images/asteroid.png"))
+  (set! bird (create-entity bird-sprite #v(100 100) #:speed BIRD-SPEED #:origin #v(bird-hw bird-hh))))
 
 (define (game-draw alpha)
   (draw-entity bird)
@@ -170,10 +164,10 @@
 (define (game-update dt)
   (let ((dt-seconds (/ dt 1000.0)))
     (for-each (lambda (bullet) (update-entity! bullet dt-seconds)) bullets)
-    ;;(bullets-update! dt-seconds)
     (for-each (lambda (h) (h key-state)) key-handlers )
     (update-entity! bird dt-seconds)
-    (bird-update! dt)))
+    ;;(bird-update! dt)
+    ))
 
 (define (draw alpha)
   "Call the game draw function but don't let it crash"
