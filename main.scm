@@ -6,6 +6,7 @@
  (chickadee math rect)
  (chickadee render sprite)
  (chickadee render texture)
+ (chickadee render font)
  (chickadee scripting))
 
 (define repl (spawn-coop-repl-server))
@@ -32,6 +33,7 @@
 (define bird #f)
 (define bullets '())
 (define asteroids '())
+(define score 0)
 
 (define (reset!)
   (assoc-set! bird 'angular-vel 0.0)
@@ -172,14 +174,16 @@
         (set! shot #f))))
 
 (define (update-bullet! bullet dt)
-  (update-entity! bullet dt)
   (for-each
    (lambda (asteroid)
      (if (collides? bullet asteroid)
          (begin
            (set! bullets (delete bullet bullets))
-           (set! asteroids (delete asteroid asteroids)))))
-   asteroids))
+           (set! asteroids (delete asteroid asteroids))
+           (set! score (+ score 1)))))
+   asteroids)
+  
+  (update-entity! bullet dt))
 
 ;; Lambdas are for hot reloading...
 (define key-handlers
@@ -207,7 +211,8 @@
 (define (game-draw alpha)
   (draw-entity bird)
   (for-each draw-entity bullets)
-  (for-each draw-entity asteroids))
+  (for-each draw-entity asteroids)
+  (draw-text (string-append "Score: " (number->string score)) #v(10 10) #:scale #v(2 2)))
 
 (define (game-update dt)
   (let ((dt-seconds (/ dt 1000.0)))
