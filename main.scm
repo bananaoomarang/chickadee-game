@@ -41,6 +41,7 @@
 (define asteroids '())
 (define score 0)
 
+(define spawn-asteroids-script #f)
 
 (define black (make-color 0.0 0.0 0.0 1.0))
 (define main-viewport
@@ -217,7 +218,12 @@
   (set! bird (create-entity bird-sprite #v(100 100)
                             #:speed BIRD-SPEED
                             #:origin #v(bird-hw bird-hh)
-                            #:scale #v(0.75 0.75))))
+                            #:scale #v(0.75 0.75)))
+  (set! spawn-asteroids-script
+    (script
+     (while #t
+       (spawn-asteroid!)
+       (sleep 5000)))))
 
 (define (game-draw alpha)
   (draw-entity bird)
@@ -272,10 +278,5 @@
 (start!)
 (reset!)
 
-(define spawn-asteroid-script
-  (script
-   (while #t
-     (spawn-asteroid!)
-     (sleep 5000))))
+;;(cancel-script spawn-asteroid-script)
 
-(cancel-script spawn-asteroid-script)
