@@ -1,0 +1,74 @@
+This is guile-opengl.info, produced by makeinfo version 6.6 from
+guile-opengl.texi.
+
+This manual is for Guile-OpenGL (version 0.1.0, updated 15 June 2019)
+
+   Copyright (C) 2014 Free Software Foundation, Inc.  and others.
+
+     Guile-OpenGL is free software: you can redistribute and/or modify
+     it and its documentation under the terms of the GNU Lesser General
+     Public License as published by the Free Software Foundation, either
+     version 3 of the License, or (at your option) any later version.
+
+     Guile-OpenGL is distributed in the hope that it will be useful, but
+     WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+     Lesser General Public License for more details.
+
+     You should have received a copy of the GNU Lesser General Public
+     License along with this program.  If not, see
+     <http://www.gnu.org/licenses/>.
+
+   Portions of this document were generated from the upstream OpenGL
+documentation.  The work as a whole is redistributable under the license
+above.  Sections containing generated documentation are prefixed with a
+specific copyright header.
+INFO-DIR-SECTION The Algorithmic Language Scheme
+START-INFO-DIR-ENTRY
+* opengl: (guile-opengl).              OpenGL for Guile.
+* gl: (guile-opengl)GL.                A Scheme interface to the OpenGL API.
+* glx: (guile-opengl)GLX.              Using OpenGL with the X Window System.
+* glu: (guile-opengl)GLU.              The GL Utility library.
+* glut: (guile-opengl)GLUT.            The GL Utility Toolkit.
+END-INFO-DIR-ENTRY
+
+
+File: guile-opengl.info,  Node: GL Extensions,  Prev: Low-Level GL,  Up: GL
+
+3.7 GL Extensions
+=================
+
+     The future is already here - it's just not very evenly distributed.
+
+     - William Gibson
+
+   Before interfaces end up in the core OpenGL API, the are usually
+present as vendor-specific or candidate extensions.  Indeed, the making
+of an OpenGL standard these days seems to be a matter of simply
+collecting a set of mature extensions and making them coherent.
+
+   Guile doesn't currently provide specific interfaces for GL
+extensions.  Perhaps it should, but that's a lot of work that we haven't
+had time to do.  Contributions are welcome.
+
+   In the meantime, if you know enough about GL to know that you need an
+extension, you can define one yourself - after all, this library is all
+a bunch of Scheme code anyway.
+
+   For example, let's say you decide that you need to render to a
+framebuffer object.  You go to <http://www.opengl.org/registry/> and
+pick out an extension, say
+<http://www.opengl.org/registry/specs/ARB/framebuffer_object.txt>.
+
+   This extension defines a procedure, 'GLboolean
+glIsRenderBuffer(GLuint)'.  So you define it:
+
+     (use-modules (gl runtime) (gl types))
+     (define-gl-procedure (glIsRenderBuffer (buf GLuint) -> GLboolean)
+       "Render buffer predicate.  Other docs here.")
+
+   And that's that.  It's a low-level binding, but what did you expect?
+
+   Note that you'll still need to check for the availability of this
+extension at runtime with '(glGetString GL_EXTENSIONS)'.
+

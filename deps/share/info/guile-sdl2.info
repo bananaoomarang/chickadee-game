@@ -1,0 +1,1998 @@
+This is guile-sdl2.info, produced by makeinfo version 6.5 from
+guile-sdl2.texi.
+
+Copyright (C) 2016 David Thompson <davet@gnu.org>
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.3 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled "GNU Free Documentation License".
+
+     A copy of the license is also available from the Free Software
+     Foundation Web site at <http://www.gnu.org/licenses/fdl.html>.
+
+   The document was typeset with GNU Texinfo (http://www.texinfo.org/).
+
+
+File: guile-sdl2.info,  Node: Top,  Next: Introduction,  Up: (dir)
+
+Guile-SDL2
+**********
+
+Copyright (C) 2016 David Thompson <davet@gnu.org>
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.3 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled "GNU Free Documentation License".
+
+     A copy of the license is also available from the Free Software
+     Foundation Web site at <http://www.gnu.org/licenses/fdl.html>.
+
+   The document was typeset with GNU Texinfo (http://www.texinfo.org/).
+
+* Menu:
+
+* Introduction::                About Guile-SDL2.
+* Installation::                Installing Guile-SDL2.
+* API Reference::               High-level Scheme interfaces to SDL2.
+* Contributing::                Guidelines for hacking Guile-SDL2.
+
+* Copying This Manual::         The GNU Free Documentation License and you!
+* Index::
+
+
+File: guile-sdl2.info,  Node: Introduction,  Next: Installation,  Prev: Top,  Up: Top
+
+1 Introduction
+**************
+
+Guile-SDL2 provides both low-level and high-level Guile Scheme bindings
+to the Simple DirectMedia Layer version 2.0 C library.  The bindings are
+written in pure Scheme by using Guile's foreign function interface.  In
+addition to the SDL2 core library, bindings are also provided for the
+SDL2_image, SDL2_mixer, and SDL2_ttf add-on libraries.
+
+   While Guile-SDL2 does provide direct, low-level bindings for the SDL2
+C API, its main feature is exposing high-level interfaces that Scheme
+programmers will find comfortable to use, hiding away the ugly, foreign
+C details.  This manual will cover only the high-level API. *note API
+Reference::
+
+   As of this writing, the bindings are useful, but _incomplete_.  If
+you find an SDL2 feature that you cannot use with Guile-SDL2, let us
+know and maybe send a patch!  *note Contributing::
+
+
+File: guile-sdl2.info,  Node: Installation,  Next: API Reference,  Prev: Introduction,  Up: Top
+
+2 Installation
+**************
+
+Guile-SDL2 is available for download from its website at
+<dthompson.us/projects/guile-sdl2.html>.  This section describes the
+software requirements of Guile-SDL2, as well as how to install it.
+
+   The build procedure for Guile-SDL2 is the same as for GNU software
+packages, and is not covered here.  Please see the files 'README.org'
+and 'INSTALL.org' for additional details.
+
+* Menu:
+
+* Requirements::                Software needed to build and run Guile-SDL2.
+
+
+File: guile-sdl2.info,  Node: Requirements,  Up: Installation
+
+2.1 Requirements
+================
+
+Guile-SDL2 depends on the following packages:
+
+   * GNU Guile (https://gnu.org/software/guile), version 2.0.11 or
+     later;
+   * SDL2 (https://libsdl.org), version 2.0.0 or later;
+
+   Guile-SDL2 has the following optional dependencies:
+
+   * SDL2_image (https://www.libsdl.org/projects/SDL_image), version
+     2.0.0 or later;
+   * SDL2_mixer (https://www.libsdl.org/projects/SDL_mixer), version
+     2.0.0 or later;
+   * SDL2_ttf (https://www.libsdl.org/projects/SDL_ttf), version 2.0.0
+     or later;
+
+
+File: guile-sdl2.info,  Node: API Reference,  Next: Contributing,  Prev: Installation,  Up: Top
+
+3 API Reference
+***************
+
+* Menu:
+
+* Basics::                      Initialization and other basic things.
+* Window Management::           Working with the window system.
+* Input::                       Keyboard, mouse, joystick input.
+* Events::                      Asynchronous event handling.
+* Rects::                       2D rectangles.
+* Surfaces::                    Software rendering.
+* Rendering::                   Hardware accelerated rendering.
+* Images::                      Loading and saving images.
+* Sound::                       Sound effects and music.
+* Fonts::                       Truetype and bitmap font rendering.
+
+
+File: guile-sdl2.info,  Node: Basics,  Next: Window Management,  Up: API Reference
+
+3.1 Basics
+==========
+
+     (use-modules (sdl2))
+
+ -- Procedure: sdl-init [SUBSYSTEMS]
+     Initialize the SDL library.  This must be called before using any
+     other SDL procedure.
+
+     SUBSYSTEMS is an optional list of symbols that specifies the
+     subsystems to initialize.  All subsystems are initialized by
+     default.  The possible flags are 'timer', 'audio', 'video',
+     'haptic', 'game-controller', and 'events'.
+
+ -- Procedure: sdl-quit
+     Quit all activated SDL subsystems.  This procedure should be called
+     upon all exit conditions.
+
+ -- Procedure: sdl-version
+     Return a three element list containing the major, minor, and patch
+     version of the linked SDL library.
+
+ -- Procedure: sdl-ticks
+     Return the number of milliseconds since the SDL library was
+     initialized.
+
+
+File: guile-sdl2.info,  Node: Window Management,  Next: Input,  Prev: Basics,  Up: API Reference
+
+3.2 Window Management
+=====================
+
+* Menu:
+
+* Windows::                     Window manipulation.
+* OpenGL::                      OpenGL contexts.
+
+     (use-modules (sdl2 video))
+
+
+File: guile-sdl2.info,  Node: Windows,  Next: OpenGL,  Up: Window Management
+
+3.2.1 Windows
+-------------
+
+ -- Procedure: make-window [#:title "Guile SDL2 Window"] [#:position (#f
+          #f)] [#:size (640 480)] [#:maximize? #f] [#:minimize? #f]
+          [#:opengl? #f] [#:border? #t] [#:fullscreen? #f]
+          [#:fullscreen-desktop? #f] [#:grab-input? #f] [#:high-dpi? #f]
+     Create a new window named TITLE with dimensions SIZE located at
+     POSITION on the display.  POSITION and SIZE are two-element lists
+     in the form '(x y)', where each coordinate is measured in pixels.
+     In the case of POSITION, a coordinate may use the special symbol
+     CENTER to indicate that the window should be centered on that axis,
+     or '#f' to indicate that it does not matter where the window is
+     located on that axis.
+
+ -- Procedure: close-window! window
+     Close WINDOW.
+
+ -- Procedure: call-with-window window proc
+     Call PROC with WINDOW, an SDL window object, and close it when PROC
+     returns or otherwise exits.
+
+ -- Procedure: window-title window
+     Return the title for WINDOW.
+
+ -- Procedure: window-size window
+     Return the dimensions of WINDOW.
+
+ -- Procedure: window-position window
+     Return the position of WINDOW on the display.
+
+ -- Procedure: window-id window
+     Return the numeric ID of WINDOW.
+
+ -- Procedure: id->window id
+     Return the window corresponding to ID, a positive integer, or '#f'
+     if there is no such window.
+
+ -- Procedure: hide-window! window
+     Hide WINDOW.
+
+ -- Procedure: show-window! window
+     Show WINDOW and focus on it.
+
+ -- Procedure: maximize-window! window
+     Make WINDOW as large as possible.
+
+ -- Procedure: minimize-window! window
+     Shrink WINDOW to an iconic representation.
+
+ -- Procedure: raise-window! window
+     Raise WINDOW above all other windows and set input focus.
+
+ -- Procedure: restore-window! window
+     Restore the size and position of a minimized or maximized WINDOW.
+
+ -- Procedure: set-window-border! window border?
+     When BORDER?, draw the usual border around WINDOW, otherwise remove
+     the border.
+
+ -- Procedure: set-window-title! window title
+     Set the title of WINDOW to the string TITLE.
+
+ -- Procedure: set-window-position! window position
+     Set the position of WINDOW to POSITION, a two-element list of (x,y)
+     coordinates measured in pixels.
+
+ -- Procedure: set-window-size! window size
+     Set the dimensions of WINDOW to SIZE, a two-element list of
+     (width,height) coordinates measured in pixels.
+
+ -- Procedure: set-window-fullscreen! window fullscreen? [#:desktop?]
+     Toggle fullscreen mode on/off for WINDOW.  If FULLSCREEN?,
+     fullscreen mode is activated, otherwise it is deactivated.  If
+     FULLSCREEN? and DESKTOP?, a special "fake" fullscreen mode is used
+     that takes the size of the desktop.
+
+
+File: guile-sdl2.info,  Node: OpenGL,  Prev: Windows,  Up: Window Management
+
+3.2.2 OpenGL
+------------
+
+ -- Procedure: make-gl-context window
+     Create an OpenGL context for WINDOW.
+
+ -- Procedure: delete-gl-context! context
+     Delete CONTEXT, an OpenGL context object.
+
+ -- Procedure: call-with-gl-context window proc
+     Call PROC with a new OpenGL context created for WINDOW, and close
+     the context when PROC returns or otherwise exits.
+
+ -- Procedure: swap-gl-window window
+     Update WINDOW with OpenGL rendering.
+
+ -- Procedure: set-gl-attribute! attr value
+     Set the OpenGL attribute represented by the symbol ATTR to VALUE.
+     Possible values for ATTR are:
+
+        * 'red-size'
+        * 'green-size'
+        * 'blue-size'
+        * 'alpha-size'
+        * 'buffer-size'
+        * 'double-buffer'
+        * 'depth-size'
+        * 'stencil-size'
+        * 'accum-red-size'
+        * 'accum-green-size'
+        * 'accum-blue-size'
+        * 'stereo'
+        * 'multisample-buffers'
+        * 'multisample-samples'
+        * 'retained-backing'
+        * 'context-major-version'
+        * 'context-minor-version'
+        * 'context-egl'
+        * 'context-flags'
+        * 'context-profile-mask'
+        * 'share-with-current-context'
+        * 'framebuffer-srgb-capable'
+
+ -- Procedure: set-gl-swap-interval! interval
+     Set the framebuffer swap interval for the current OpenGL context to
+     the type indicated by the symbol INTERVAL.  Possible values of
+     INTERVAL are:
+
+        * 'immediate', for immediate updates
+        * 'vsync', for updates synchronized with the screen's vertical
+          retrace
+        * 'late-swap-tear', for late swap tearing
+
+     Late swap tearing works the same as vsync, but if the vertical
+     retrace has been missed for a given frame, buffers are swapped
+     immediately, which might be less jarring for the user during
+     occasional framerate drops.
+
+
+File: guile-sdl2.info,  Node: Input,  Next: Events,  Prev: Window Management,  Up: API Reference
+
+3.3 Input
+=========
+
+* Menu:
+
+* Keyboard::                    Keyboard input.
+* Mouse::                       Mouse input.
+* Joysticks::                   Joystick input.
+* Game Controllers::            Game controller input.
+
+
+File: guile-sdl2.info,  Node: Keyboard,  Next: Mouse,  Up: Input
+
+3.3.1 Keyboard
+--------------
+
+     (use-modules (sdl2 input keyboard))
+
+ -- Procedure: key-pressed? key
+     Return '#t' if KEY is currently being pressed.
+
+ -- Procedure: key-released? key
+     Return '#t' is KEY is not currently being pressed.
+
+
+File: guile-sdl2.info,  Node: Mouse,  Next: Joysticks,  Prev: Keyboard,  Up: Input
+
+3.3.2 Mouse
+-----------
+
+     (use-modules (sdl2 input mouse))
+
+ -- Procedure: mouse-x
+     Return the x coordinate of the mouse cursor.
+
+ -- Procedure: mouse-y
+     Return the y coordinate of the mouse cursor.
+
+ -- Procedure: mouse-button-pressed? button
+     Return '#t' if BUTTON is currently being pressed.
+
+ -- Procedure: mouse-button-released? button
+     Return '#t' if BUTTON is not currently being pressed.
+
+
+File: guile-sdl2.info,  Node: Joysticks,  Next: Game Controllers,  Prev: Mouse,  Up: Input
+
+3.3.3 Joysticks
+---------------
+
+     (use-modules (sdl2 input joystick))
+
+ -- Procedure: num-joysticks
+     Return the current number of connected joystick devices.
+
+ -- Procedure: open-joystick device-index
+     Return a joystick object for the physical joystick device
+     associated with DEVICE-INDEX.
+
+ -- Procedure: close-joystick joystick
+     Close JOYSTICK.
+
+ -- Procedure: joystick-instance-id joystick
+     Return the instance id of JOYSTICK.
+
+ -- Procedure: joystick-power-level joystick
+     Return the symbolic battery power level for JOYSTICK, either
+     'unknown', 'empty', 'low', 'medium', 'full', or 'wired'.
+
+ -- Procedure: joystick-num-axes joystick
+     Return the number of axes for JOYSTICK.
+
+ -- Procedure: joystick-num-balls joystick
+     Return the number of balls for JOYSTICK.
+
+ -- Procedure: joystick-num-buttons joystick
+     Return the number of buttons for JOYSTICK.
+
+ -- Procedure: joystick-num-hats joystick
+     Return the number of hats for JOYSTICK.
+
+
+File: guile-sdl2.info,  Node: Game Controllers,  Prev: Joysticks,  Up: Input
+
+3.3.4 Game Controllers
+----------------------
+
+     (use-modules (sdl2 input game-controller))
+
+ -- Procedure: load-game-controller-mappings! file
+     Load game controller mapping from FILE and return the number of
+     mappings added this way.
+
+     See
+     <https://raw.github.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt>
+     for a community maintained controller mapping file.
+
+ -- Procedure: open-game-controller joystick-index
+     Return a game controller object for the physical joystick device
+     associated with the JOYSTICK-INDEX.
+
+ -- Procedure: close-game-controller controller
+     Close CONTROLLER.
+
+ -- Procedure: game-controller? controller
+     Close CONTROLLER.
+
+ -- Procedure: game-controller-attached? controller
+     Return '#t' if CONTROLLER is currently in use.
+
+ -- Procedure: game-controller-joystick controller
+     Return the underlying joystick object associated with CONTROLLER.
+
+ -- Procedure: game-controller-name controller
+     Return the human readable name for CONTROLLER.
+
+ -- Procedure: game-controller-axis controller axis
+     Return a number in the range [-32768, 32767] representing the
+     current state of AXIS on CONTROLLER.
+
+     AXIS may be one of the following symbols:
+        * 'left-x'
+        * 'left-y'
+        * 'right-x'
+        * 'right-y'
+        * 'trigger-left'
+        * 'trigger-right'
+
+ -- Procedure: game-controller-button-pressed? controller button
+     Return '#t' if BUTTON is pressed on CONTROLLER.
+
+     BUTTON may be one of the following symbols:
+        * 'a'
+        * 'b'
+        * 'x'
+        * 'y'
+        * 'back'
+        * 'guide'
+        * 'start'
+        * 'left-stick'
+        * 'right-stick'
+        * 'left-shoulder'
+        * 'right-shoulder'
+        * 'dpad-up'
+        * 'dpad-down'
+        * 'dpad-left'
+        * 'dpad-right'
+
+ -- Procedure: game-controller-index? joystick-index
+     Return '#t' if JOYSTICK-INDEX is a valid game controller index.
+
+
+File: guile-sdl2.info,  Node: Events,  Next: Rects,  Prev: Input,  Up: API Reference
+
+3.4 Events
+==========
+
+     (use-modules (sdl2 events))
+
+ -- Procedure: make-quit-event timestamp
+
+ -- Procedure: quit-event? e
+     Return '#t' if E is a quit event.
+
+ -- Procedure: quit-event-timestamp e
+
+ -- Procedure: make-window-event timestamp window-id type vector
+
+ -- Procedure: window-event? e
+     Return '#t' if E is a window event.
+
+ -- Procedure: window-shown-event? e
+     Return '#t' if E is a window shown event.
+
+ -- Procedure: window-hidden-event? e
+     Return '#t' if E is a window hidden event.
+
+ -- Procedure: window-exposed-event? e
+     Return '#t' if E is a window exposed event.
+
+ -- Procedure: window-moved-event? e
+     Return '#t' if E is a window moved event.
+
+ -- Procedure: window-resized-event? e
+     Return '#t' if E is a window resized event.
+
+ -- Procedure: window-size-changed-event? e
+     Return '#t' if E is a window size changed event.
+
+ -- Procedure: window-minimized-event? e
+     Return '#t' if E is a window minimized event.
+
+ -- Procedure: window-maximized-event? e
+     Return '#t' if E is a window maximized event.
+
+ -- Procedure: window-restored-event? e
+     Return '#t' if E is a window restored event.
+
+ -- Procedure: window-enter-event? e
+     Return '#t' if E is a window enter event.
+
+ -- Procedure: window-leave-event? e
+     Return '#t' if E is a window leave event.
+
+ -- Procedure: window-focus-gained-event? e
+     Return '#t' if E is a window focus gained event.
+
+ -- Procedure: window-focus-lost-event? e
+     Return '#t' if E is a window focus lost event.
+
+ -- Procedure: window-closed-event? e
+     Return '#t' if E is a window closed event.
+
+ -- Procedure: window-event-timestamp e
+
+ -- Procedure: window-event-window-id e
+
+ -- Procedure: window-event-type e
+
+ -- Procedure: window-event-vector e
+
+ -- Procedure: make-keyboard-event timestamp window-id pressed? repeat?
+          key scancode modifiers
+
+ -- Procedure: keyboard-event? e
+     Return '#t' if E is a keyboard event.
+
+ -- Procedure: keyboard-down-event? e
+     Return '#t' if E is a key press event.
+
+ -- Procedure: keyboard-up-event? e
+     Return '#t' if E is a key release event.
+
+ -- Procedure: keyboard-event-timestamp e
+
+ -- Procedure: keyboard-event-window-id e
+
+ -- Procedure: keyboard-event-pressed? e
+
+ -- Procedure: keyboard-event-repeat? e
+
+ -- Procedure: keyboard-event-key e
+
+ -- Procedure: keyboard-event-scancode e
+
+ -- Procedure: keyboard-event-modifiers e
+
+ -- Procedure: make-text-input-event timestamp window-id text
+
+ -- Procedure: text-input-event? e
+     Return '#t' if E is a text input event.
+
+ -- Procedure: text-input-event-timestamp e
+
+ -- Procedure: text-input-event-window-id e
+
+ -- Procedure: text-input-event-text e
+
+ -- Procedure: make-mouse-button-event timestamp window-id which button
+          pressed? clicks x y
+
+ -- Procedure: mouse-button-event? e
+     Return '#t' if E is a mouse button event.
+
+ -- Procedure: mouse-button-down-event? e
+     Return '#t' if E is a mouse button down event.
+
+ -- Procedure: mouse-button-up-event? e
+     Return '#t' if E is a mouse button up event.
+
+ -- Procedure: mouse-button-event-timestamp e
+
+ -- Procedure: mouse-button-event-window-id e
+
+ -- Procedure: mouse-button-event-which e
+
+ -- Procedure: mouse-button-event-button e
+
+ -- Procedure: mouse-button-event-pressed? e
+
+ -- Procedure: mouse-button-event-clicks e
+
+ -- Procedure: mouse-button-event-x e
+
+ -- Procedure: mouse-button-event-y e
+
+ -- Procedure: make-mouse-motion-event timestamp window-id which buttons
+          x y x-rel y-rel
+
+ -- Procedure: mouse-motion-event? e
+     Return '#t' if E is a mouse motion event.
+
+ -- Procedure: mouse-motion-event-timestamp e
+
+ -- Procedure: mouse-motion-event-window-id e
+
+ -- Procedure: mouse-motion-event-which e
+
+ -- Procedure: mouse-motion-event-buttons e
+
+ -- Procedure: mouse-motion-event-x e
+
+ -- Procedure: mouse-motion-event-y e
+
+ -- Procedure: mouse-motion-event-x-rel e
+
+ -- Procedure: mouse-motion-event-y-rel e
+
+ -- Procedure: make-joystick-axis-event timestamp which axis value
+
+ -- Procedure: joystick-axis-event? e
+     Return '#t' if E is a joystick axis event.
+
+ -- Procedure: joystick-axis-event-timestamp e
+
+ -- Procedure: joystick-axis-event-which e
+
+ -- Procedure: joystick-axis-event-button e
+
+ -- Procedure: joystick-axis-event-pressed? e
+
+ -- Procedure: make-joystick-ball-event timestamp which ball x-rel y-rel
+
+ -- Procedure: joystick-ball-event? e
+     Return '#t' if E is a joystick ball event.
+
+ -- Procedure: joystick-ball-event-timestamp e
+
+ -- Procedure: joystick-ball-event-which e
+
+ -- Procedure: joystick-ball-event-ball e
+
+ -- Procedure: joystick-ball-event-x-rel e
+
+ -- Procedure: joystick-ball-event-y-rel e
+
+ -- Procedure: make-joystick-hat-event timestamp which hat value
+
+ -- Procedure: joystick-hat-event? e
+     Return '#t' if E is a joystick hat event.
+
+ -- Procedure: joystick-hat-event-timestamp e
+
+ -- Procedure: joystick-hat-event-which e
+
+ -- Procedure: joystick-hat-event-hat e
+
+ -- Procedure: joystick-hat-event-value e
+
+ -- Procedure: make-joystick-device-event timestamp which action
+
+ -- Procedure: joystick-device-event? e
+     Return '#t' if E is a joystick device event.
+
+ -- Procedure: joystick-device-event-timestamp e
+
+ -- Procedure: joystick-device-event-which e
+
+ -- Procedure: joystick-device-event-action e
+
+ -- Procedure: make-controller-axis-event timestamp which axis value
+
+ -- Procedure: controller-axis-event? e
+     Return '#t' if E is a game controller axis event.
+
+ -- Procedure: controller-axis-event-timestamp e
+
+ -- Procedure: controller-axis-event-which e
+
+ -- Procedure: controller-axis-event-axis e
+
+ -- Procedure: controller-axis-event-value e
+
+ -- Procedure: make-controller-button-event timestamp which button
+          pressed?
+
+ -- Procedure: controller-button-event? e
+     Return '#t' if EVENT is a game controller button event.
+
+ -- Procedure: controller-button-down-event? e
+
+ -- Procedure: controller-button-up-event? e
+
+ -- Procedure: controller-button-event-timestamp e
+
+ -- Procedure: controller-button-event-which e
+
+ -- Procedure: controller-button-event-button e
+
+ -- Procedure: controller-button-event-pressed? e
+
+ -- Procedure: make-controller-device-event timestamp which action
+
+ -- Procedure: controller-device-event? e
+     Return '#t' if EVENT is a game controller device event.
+
+ -- Procedure: controller-added-event? e
+     Return '#t' if EVENT is a game controller device event with the
+     'added' action.
+
+ -- Procedure: controller-removed-event? e
+     Return '#t' if EVENT is a game controller device event with the
+     'removed' action.
+
+ -- Procedure: controller-remapped-event? e
+     Return '#t' if EVENT is a game controller device event with the
+     'remapped' action.
+
+ -- Procedure: controller-device-event-timestamp e
+
+ -- Procedure: controller-device-event-which e
+
+ -- Procedure: controller-device-event-action e
+
+ -- Procedure: poll-event
+
+
+File: guile-sdl2.info,  Node: Rects,  Next: Surfaces,  Prev: Events,  Up: API Reference
+
+3.5 Rects
+=========
+
+     (use-modules (sdl2 rect))
+
+ -- Procedure: make-rect X Y WIDTH HEIGHT
+     Return a new rectangle whose upper-left corner is at (X, Y) and is
+     WIDTH pixels wide and HEIGHT pixels high.
+
+ -- Procedure: rect-x RECT
+     Return the X coordinate of RECT.
+
+ -- Procedure: rect-y RECT
+     Return the Y coordinate of RECT.
+
+ -- Procedure: rect-width RECT
+     Return the width of RECT.
+
+ -- Procedure: rect-height RECT
+     Return the height of RECT.
+
+
+File: guile-sdl2.info,  Node: Surfaces,  Next: Rendering,  Prev: Rects,  Up: API Reference
+
+3.6 Surfaces
+============
+
+     (use-modules (sdl2 surface))
+
+ -- Procedure: color? c
+     Return '#t' if C is a color.
+
+ -- Procedure: color-r c
+
+ -- Procedure: color-g c
+
+ -- Procedure: color-b c
+
+ -- Procedure: color-a c
+
+ -- Procedure: palette? p
+     Return '#t' if P is a palette.
+
+ -- Procedure: palette-length palette
+     Return the number of colors in PALETTE.
+
+ -- Procedure: palette-colors palette
+     Return the colors in PALETTE.
+
+ -- Procedure: pixel-format? pf
+     Return '#t' if PF is a pixel format.
+
+ -- Procedure: pixel-format-name pf
+     Return the symbolic name of the pixel format PF.
+
+ -- Procedure: pixel-format-palette pf
+     Return the palette for the pixel format PF.
+
+ -- Procedure: pixel-format-bits-per-pixel pf
+     Return the number of bits per pixel for the pixel format PF.
+
+ -- Procedure: pixel-format-bytes-per-pixel pf
+     Return the number of bytes per pixel for the pixel format PF.
+
+ -- Procedure: pixel-format-red-mask pf
+     Return the bitmask for the red component of a pixel in the pixel
+     format PF.
+
+ -- Procedure: pixel-format-green-mask pf
+     Return the bitmask for the green component of a pixel in the pixel
+     format PF.
+
+ -- Procedure: pixel-format-blue-mask pf
+     Return the bitmask for the blue component of a pixel in the pixel
+     format PF.
+
+ -- Procedure: pixel-format-alpha-mask pf
+     Return the bitmask for the alpha component of a pixel in the pixel
+     format PF.
+
+ -- Procedure: make-rgb-surface width height depth
+     Create a new SDL surface with the dimensions WIDTH and HEIGHT and
+     DEPTH bits per pixel.
+
+ -- Procedure: bytevector->surface bv width height depth pitch
+     Convert BV, a bytevector of pixel data with dimensions
+     WIDTHxHEIGHT, to an SDL surface.  Each pixel is DEPTH bits in size,
+     and each row of pixels is PITCH bytes in size.
+
+ -- Procedure: delete-surface! surface
+     Free the memory used by SURFACE.
+
+ -- Procedure: call-with-surface surface proc
+     Call PROC, passing it SURFACE and deleting SURFACE upon exit of
+     PROC.
+
+ -- Procedure: load-bmp file
+     Create a new surface from the bitmap data in FILE.
+
+ -- Procedure: surface-width surface
+     Return the width of SURFACE in pixels.
+
+ -- Procedure: surface-height surface
+     Return the height of SURFACE in pixels.
+
+ -- Procedure: surface-pitch surface
+     Return the length of a row of pixels in SURFACE in bytes.
+
+ -- Procedure: surface-pixels surface
+     Return a bytevector containing the raw pixel data in SURFACE.
+
+ -- Procedure: surface-pixel-format surface
+     Return the pixel format for SURFACE.
+
+ -- Procedure: convert-surface-format surface format
+     Convert the pixels in SURFACE to FORMAT, a symbol representing a
+     specific pixel format, and return a new surface object.
+
+     Valid format types are:
+
+        * 'index1lsb'
+        * 'index1msb'
+        * 'index4lsb'
+        * 'index4msb'
+        * 'index8'
+        * 'rgb332'
+        * 'rgb444'
+        * 'rgb555'
+        * 'bgr555'
+        * 'argb4444'
+        * 'rgba4444'
+        * 'abgr4444'
+        * 'bgra4444'
+        * 'argb1555'
+        * 'rgba5551'
+        * 'abgr1555'
+        * 'bgra5551'
+        * 'rgb565'
+        * 'bgr565'
+        * 'rgb24'
+        * 'bgr24'
+        * 'rgb888'
+        * 'rgbx8888'
+        * 'bgr888'
+        * 'bgrx8888'
+        * 'argb8888'
+        * 'rgba8888'
+        * 'abgr8888'
+        * 'bgra8888'
+        * 'argb2101010'
+        * 'yv12'
+        * 'iyuv'
+        * 'yuy2'
+        * 'uyvy'
+        * 'yvyu'
+
+ -- Procedure: blit-surface SRC SRC-RECT DST DST-RECT
+     Blit the rectangle SRC-RECT from the surface SRC to DST-RECT of the
+     surface DST.
+
+ -- Procedure: blit-scaled SRC SRC-RECT DST DST-RECT
+     Blit the rectangle SRC-RECT from the surface SRC to DST-RECT of the
+     surface DST, scaling the source to fit the destination.
+
+ -- Procedure: fill-rect DST RECT COLOR
+     Fill RECT with COLOR, a 32-bit color encoded as an integer value,
+     in the surface DST.
+
+
+File: guile-sdl2.info,  Node: Rendering,  Next: Images,  Prev: Surfaces,  Up: API Reference
+
+3.7 Rendering
+=============
+
+     (use-modules (sdl2 render))
+
+ -- Procedure: make-renderer window [#:optional flags='(accelerated
+          vsync)]
+     Return a new renderer for WINDOW created with the options specified
+     in FLAGS, a list of symbols.  The valid symbols that may appear in
+     FLAGS are:
+
+        * software, to use a software renderer fallback
+        * accelerated, to use hardware acceleration
+        * vsync, to synchronize rendering with the monitor's refresh
+          rate
+        * texture, for render to texture support
+
+ -- Procedure: renderer? r
+     Return '#t' if R is a renderer.
+
+ -- Procedure: delete-renderer! renderer
+     Delete the rendering context RENDERER.
+
+ -- Procedure: call-with-renderer renderer proc
+     Call PROC, passing it RENDERER and closing RENDERER upon exit of
+     PROC.
+
+ -- Procedure: clear-renderer renderer
+     Clear the rendering target RENDERER with the current drawing color.
+
+ -- Procedure: present-renderer renderer
+     Display RENDERER.
+
+ -- Procedure: render-copy renderer texture [#:angle 0] [#:srcrect]
+          [#:dstrect] [#:center]
+     Copy TEXTURE to the rendering target of RENDERER.
+
+ -- Procedure: render-draw-line renderer x1 y1 x2 y2
+     Draw a line from (X1, Y1) to (X2, Y2) on the current rendering
+     target of RENDERER.
+
+ -- Procedure: render-draw-lines renderer point
+     Draw a series of connected lines from POINTS on the current
+     rendering target of RENDERER.
+
+ -- Procedure: render-draw-point renderer x y
+     Draw a point at (X, Y) on the current rendering target of RENDERER.
+
+ -- Procedure: render-draw-points renderer points
+     Draw a multiple points from POINTS on the current rendering target
+     of RENDERER.
+
+ -- Procedure: surface->texture renderer surface
+     Convert SURFACE to a texture suitable for RENDERER.
+
+ -- Procedure: delete-texture! texture
+     Free the memory used by TEXTURE.
+
+
+File: guile-sdl2.info,  Node: Images,  Next: Sound,  Prev: Rendering,  Up: API Reference
+
+3.8 Images
+==========
+
+     (use-modules (sdl2 image))
+
+ -- Procedure: image-init
+     Initialize dynamically loaded image libraries.
+
+ -- Procedure: image-quit
+     Clean up dynamically loaded image libraries.
+
+ -- Procedure: load-image file
+     Load the image in FILE and return an SDL surface.
+
+ -- Procedure: save-png surface file
+     Save SURFACE to FILE as a PNG formatted image.
+
+
+File: guile-sdl2.info,  Node: Sound,  Next: Fonts,  Prev: Images,  Up: API Reference
+
+3.9 Sound
+=========
+
+     (use-modules (sdl2 mixer))
+
+ -- Scheme Variable: %default-frequency
+
+ -- Scheme Variable: %default-format
+
+ -- Scheme Variable: %default-chunk-size
+
+ -- Procedure: mixer-init [#:optional formats='(flac mod modplug mp3 ogg
+          fluidsynth)]
+     Initialize mixer library with support for FORMATS, a list of
+     symbols representing audio file formats.  Possible formats are:
+
+        * flac
+        * mod
+        * modplug
+        * mp3
+        * ogg
+        * fluidsynth
+
+ -- Procedure: mixer-quit
+     Shutdown mixer library.
+
+ -- Procedure: open-audio [#:frequency=%default-frequency]
+          [#:format=%default-format] [#:stereo?=#t]
+          [#:chunk-size=%default-chunk-size]
+     Initialize the mixer API. FREQUENCY specificies the sample rate in
+     hertz.  When STEREO? is '#t', two output channels are used,
+     otherwise mono output is used instead.  CHUNK-SIZE specifies the
+     number of bytes used per output sample.  FORMAT is a symbol that
+     specifies the output sample format.  Possible values are:
+
+        * u8
+        * s8
+        * u16lsb
+        * s16lsb
+        * u16msb
+        * s16msb
+        * u16
+        * s16
+        * s32lsb
+        * s32msb
+        * s32
+        * f32lsb
+        * f32msb
+        * f32
+
+ -- Procedure: close-audio
+     Shut down the mixer API.
+
+ -- Procedure: chunk? c
+     Return '#t' if C is a chunk.
+
+ -- Procedure: load-chunk file
+     Load the audio data in FILE and return an audio chunk.
+
+ -- Procedure: delete-chunk! chunk
+     Free the memory used for CHUNK.
+
+ -- Procedure: set-chunk-volume! chunk volume
+     Set the loudness of CHUNK to VOLUME, an integer in the range
+     [0,128].  Return the previous chunk volume setting.
+
+ -- Procedure: play-chunk! chunk [#:loops=0] [#:channel]
+     Play CHUNK on CHANNEL, an integer channel identifier or '#f' to use
+     the first unreserved audio channel.  CHUNK will play LOOPS + 1
+     times.  Return the channel identifier that CHUNK is played on.
+
+ -- Procedure: set-channel-volume! channel volume
+     Set the loudness of CHANNEL, an integer channel identifier or '#f'
+     for all channels, to VOLUME, an integer in the range [0,128].
+     Return the previous volume of CHANNEL, or the average of all
+     channels if CHANNEL is '#f'.
+
+ -- Procedure: pause-channel! channel
+     Pause playback on CHANNEL, an integer channel identifier, or '#f'
+     to pause all channels.
+
+ -- Procedure: resume-channel! channel
+     Resume playback on CHANNEL, an integer channel identifier, or '#f'
+     to resume all channels.
+
+ -- Procedure: stop-channel! channel
+     Halt playback on CHANNEL, an integer channel identifier, or '#f' to
+     halt all channels.
+
+ -- Procedure: channel-playing? channel
+     Return '#t' if CHANNEL is playing.
+
+ -- Procedure: playing-channels-count
+     Return the number of channels currently playing.
+
+ -- Procedure: channel-paused? channel
+     Return '#t' if CHANNEL is paused.
+
+ -- Procedure: paused-channels-count
+     Return the number of channels that are paused.
+
+ -- Procedure: music? m
+     Return '#t' if M is music.
+
+ -- Procedure: load-music file
+     Load music from FILE.
+
+ -- Procedure: delete-music! music
+     Delete the memory used for MUSIC.
+
+ -- Procedure: play-music! music [#:optional loops=1]
+     Play MUSIC, repeated LOOPS times.  LOOPS may be '#f', in which case
+     the music loops indefinitely.
+
+ -- Procedure: set-music-volume! volume
+     Set music loudness to VOLUME, an integer in the range [0,128].
+     Return the previous volume.
+
+ -- Procedure: music-volume
+     Return the music volume.
+
+ -- Procedure: pause-music!
+     Puase the music.
+
+ -- Procedure: resume-music!
+     Resume music playback.
+
+ -- Procedure: rewind-music!
+     Start music playback from the beginning.  Rewinding is only
+     supported for MOD, OGG, MP3, and native MIDI music.
+
+ -- Procedure: stop-music!
+     Halt music playback.
+
+ -- Procedure: music-playing?
+     Return '#t' if music is currently playing.
+
+ -- Procedure: music-paused?
+     Return '#t' if music is currently paused.
+
+
+File: guile-sdl2.info,  Node: Fonts,  Prev: Sound,  Up: API Reference
+
+3.10 Fonts
+==========
+
+     (use-modules (sdl2 ttf))
+
+ -- Procedure: ttf-init
+     Initialize the TTF system.
+
+ -- Procedure: ttf-quit
+     Shut down and clean up the TTF system.
+
+ -- Procedure: load-font file point-size
+     Load TTF font from FILE and return a new font object whose glyph
+     size is POINT-SIZE.
+
+ -- Procedure: delete-font! font
+     Delete the memory allocated for FONT.
+
+ -- Procedure: font-height font
+     Return the maximum height of FONT.
+
+ -- Procedure: render-font-solid font text color
+     Render TEXT, a UTF-8 encoded string, using FONT and COLOR, the
+     foreground color, and return a surface containing the results.
+
+ -- Procedure: render-font-blended font text color
+     Render TEXT, a UTF-8 encoded string, using FONT and COLOR, the
+     foreground color, and return a high-quality alpha-blended surface
+     containing the results.
+
+
+File: guile-sdl2.info,  Node: Contributing,  Next: Copying This Manual,  Prev: API Reference,  Up: Top
+
+4 Contributing
+**************
+
+* Menu:
+
+* Getting the Source::          Getting good with Git.
+* Submitting Patches::          Patches welcome!
+* Chat::                        Let's talk!
+
+
+File: guile-sdl2.info,  Node: Getting the Source,  Next: Submitting Patches,  Up: Contributing
+
+4.1 Getting the Source
+======================
+
+Guile-SDL2 is developed using the Git version control system.  The
+repository can be cloned with the following command:
+
+     git clone https://git.dthompson.us/guile-sdl2.git
+
+   To build the source code from a Git checkout, run the following:
+
+     ./bootstrap
+     ./configure
+     make
+
+   To start a Guile REPL with a pre-configured load path for using
+Guile-SDL2, use the 'pre-inst-env' script:
+
+     ./pre-inst-env guile
+
+
+File: guile-sdl2.info,  Node: Submitting Patches,  Next: Chat,  Prev: Getting the Source,  Up: Contributing
+
+4.2 Submitting Patches
+======================
+
+Patches generated by 'git format-patch' may be sent to <davet@gnu.org>.
+Thanks in advance!
+
+
+File: guile-sdl2.info,  Node: Chat,  Prev: Submitting Patches,  Up: Contributing
+
+4.3 Chat
+========
+
+The maintainer of this library hangs out in the '#guile' channel on
+<irc.freenode.net>, so help and general discussion may be found there.
+
+
+File: guile-sdl2.info,  Node: Copying This Manual,  Next: Index,  Prev: Contributing,  Up: Top
+
+Appendix A Copying This Manual
+******************************
+
+* Menu:
+
+* GNU Free Documentation License::  License for copying this manual.
+
+
+File: guile-sdl2.info,  Node: GNU Free Documentation License,  Up: Copying This Manual
+
+A.1 GNU Free Documentation License
+==================================
+
+                     Version 1.3, 3 November 2008
+
+     Copyright (C) 2000, 2001, 2002, 2007, 2008 Free Software Foundation, Inc.
+     <http://fsf.org/>
+
+     Everyone is permitted to copy and distribute verbatim copies
+     of this license document, but changing it is not allowed.
+
+  0. PREAMBLE
+
+     The purpose of this License is to make a manual, textbook, or other
+     functional and useful document "free" in the sense of freedom: to
+     assure everyone the effective freedom to copy and redistribute it,
+     with or without modifying it, either commercially or
+     noncommercially.  Secondarily, this License preserves for the
+     author and publisher a way to get credit for their work, while not
+     being considered responsible for modifications made by others.
+
+     This License is a kind of "copyleft", which means that derivative
+     works of the document must themselves be free in the same sense.
+     It complements the GNU General Public License, which is a copyleft
+     license designed for free software.
+
+     We have designed this License in order to use it for manuals for
+     free software, because free software needs free documentation: a
+     free program should come with manuals providing the same freedoms
+     that the software does.  But this License is not limited to
+     software manuals; it can be used for any textual work, regardless
+     of subject matter or whether it is published as a printed book.  We
+     recommend this License principally for works whose purpose is
+     instruction or reference.
+
+  1. APPLICABILITY AND DEFINITIONS
+
+     This License applies to any manual or other work, in any medium,
+     that contains a notice placed by the copyright holder saying it can
+     be distributed under the terms of this License.  Such a notice
+     grants a world-wide, royalty-free license, unlimited in duration,
+     to use that work under the conditions stated herein.  The
+     "Document", below, refers to any such manual or work.  Any member
+     of the public is a licensee, and is addressed as "you".  You accept
+     the license if you copy, modify or distribute the work in a way
+     requiring permission under copyright law.
+
+     A "Modified Version" of the Document means any work containing the
+     Document or a portion of it, either copied verbatim, or with
+     modifications and/or translated into another language.
+
+     A "Secondary Section" is a named appendix or a front-matter section
+     of the Document that deals exclusively with the relationship of the
+     publishers or authors of the Document to the Document's overall
+     subject (or to related matters) and contains nothing that could
+     fall directly within that overall subject.  (Thus, if the Document
+     is in part a textbook of mathematics, a Secondary Section may not
+     explain any mathematics.)  The relationship could be a matter of
+     historical connection with the subject or with related matters, or
+     of legal, commercial, philosophical, ethical or political position
+     regarding them.
+
+     The "Invariant Sections" are certain Secondary Sections whose
+     titles are designated, as being those of Invariant Sections, in the
+     notice that says that the Document is released under this License.
+     If a section does not fit the above definition of Secondary then it
+     is not allowed to be designated as Invariant.  The Document may
+     contain zero Invariant Sections.  If the Document does not identify
+     any Invariant Sections then there are none.
+
+     The "Cover Texts" are certain short passages of text that are
+     listed, as Front-Cover Texts or Back-Cover Texts, in the notice
+     that says that the Document is released under this License.  A
+     Front-Cover Text may be at most 5 words, and a Back-Cover Text may
+     be at most 25 words.
+
+     A "Transparent" copy of the Document means a machine-readable copy,
+     represented in a format whose specification is available to the
+     general public, that is suitable for revising the document
+     straightforwardly with generic text editors or (for images composed
+     of pixels) generic paint programs or (for drawings) some widely
+     available drawing editor, and that is suitable for input to text
+     formatters or for automatic translation to a variety of formats
+     suitable for input to text formatters.  A copy made in an otherwise
+     Transparent file format whose markup, or absence of markup, has
+     been arranged to thwart or discourage subsequent modification by
+     readers is not Transparent.  An image format is not Transparent if
+     used for any substantial amount of text.  A copy that is not
+     "Transparent" is called "Opaque".
+
+     Examples of suitable formats for Transparent copies include plain
+     ASCII without markup, Texinfo input format, LaTeX input format,
+     SGML or XML using a publicly available DTD, and standard-conforming
+     simple HTML, PostScript or PDF designed for human modification.
+     Examples of transparent image formats include PNG, XCF and JPG.
+     Opaque formats include proprietary formats that can be read and
+     edited only by proprietary word processors, SGML or XML for which
+     the DTD and/or processing tools are not generally available, and
+     the machine-generated HTML, PostScript or PDF produced by some word
+     processors for output purposes only.
+
+     The "Title Page" means, for a printed book, the title page itself,
+     plus such following pages as are needed to hold, legibly, the
+     material this License requires to appear in the title page.  For
+     works in formats which do not have any title page as such, "Title
+     Page" means the text near the most prominent appearance of the
+     work's title, preceding the beginning of the body of the text.
+
+     The "publisher" means any person or entity that distributes copies
+     of the Document to the public.
+
+     A section "Entitled XYZ" means a named subunit of the Document
+     whose title either is precisely XYZ or contains XYZ in parentheses
+     following text that translates XYZ in another language.  (Here XYZ
+     stands for a specific section name mentioned below, such as
+     "Acknowledgements", "Dedications", "Endorsements", or "History".)
+     To "Preserve the Title" of such a section when you modify the
+     Document means that it remains a section "Entitled XYZ" according
+     to this definition.
+
+     The Document may include Warranty Disclaimers next to the notice
+     which states that this License applies to the Document.  These
+     Warranty Disclaimers are considered to be included by reference in
+     this License, but only as regards disclaiming warranties: any other
+     implication that these Warranty Disclaimers may have is void and
+     has no effect on the meaning of this License.
+
+  2. VERBATIM COPYING
+
+     You may copy and distribute the Document in any medium, either
+     commercially or noncommercially, provided that this License, the
+     copyright notices, and the license notice saying this License
+     applies to the Document are reproduced in all copies, and that you
+     add no other conditions whatsoever to those of this License.  You
+     may not use technical measures to obstruct or control the reading
+     or further copying of the copies you make or distribute.  However,
+     you may accept compensation in exchange for copies.  If you
+     distribute a large enough number of copies you must also follow the
+     conditions in section 3.
+
+     You may also lend copies, under the same conditions stated above,
+     and you may publicly display copies.
+
+  3. COPYING IN QUANTITY
+
+     If you publish printed copies (or copies in media that commonly
+     have printed covers) of the Document, numbering more than 100, and
+     the Document's license notice requires Cover Texts, you must
+     enclose the copies in covers that carry, clearly and legibly, all
+     these Cover Texts: Front-Cover Texts on the front cover, and
+     Back-Cover Texts on the back cover.  Both covers must also clearly
+     and legibly identify you as the publisher of these copies.  The
+     front cover must present the full title with all words of the title
+     equally prominent and visible.  You may add other material on the
+     covers in addition.  Copying with changes limited to the covers, as
+     long as they preserve the title of the Document and satisfy these
+     conditions, can be treated as verbatim copying in other respects.
+
+     If the required texts for either cover are too voluminous to fit
+     legibly, you should put the first ones listed (as many as fit
+     reasonably) on the actual cover, and continue the rest onto
+     adjacent pages.
+
+     If you publish or distribute Opaque copies of the Document
+     numbering more than 100, you must either include a machine-readable
+     Transparent copy along with each Opaque copy, or state in or with
+     each Opaque copy a computer-network location from which the general
+     network-using public has access to download using public-standard
+     network protocols a complete Transparent copy of the Document, free
+     of added material.  If you use the latter option, you must take
+     reasonably prudent steps, when you begin distribution of Opaque
+     copies in quantity, to ensure that this Transparent copy will
+     remain thus accessible at the stated location until at least one
+     year after the last time you distribute an Opaque copy (directly or
+     through your agents or retailers) of that edition to the public.
+
+     It is requested, but not required, that you contact the authors of
+     the Document well before redistributing any large number of copies,
+     to give them a chance to provide you with an updated version of the
+     Document.
+
+  4. MODIFICATIONS
+
+     You may copy and distribute a Modified Version of the Document
+     under the conditions of sections 2 and 3 above, provided that you
+     release the Modified Version under precisely this License, with the
+     Modified Version filling the role of the Document, thus licensing
+     distribution and modification of the Modified Version to whoever
+     possesses a copy of it.  In addition, you must do these things in
+     the Modified Version:
+
+       A. Use in the Title Page (and on the covers, if any) a title
+          distinct from that of the Document, and from those of previous
+          versions (which should, if there were any, be listed in the
+          History section of the Document).  You may use the same title
+          as a previous version if the original publisher of that
+          version gives permission.
+
+       B. List on the Title Page, as authors, one or more persons or
+          entities responsible for authorship of the modifications in
+          the Modified Version, together with at least five of the
+          principal authors of the Document (all of its principal
+          authors, if it has fewer than five), unless they release you
+          from this requirement.
+
+       C. State on the Title page the name of the publisher of the
+          Modified Version, as the publisher.
+
+       D. Preserve all the copyright notices of the Document.
+
+       E. Add an appropriate copyright notice for your modifications
+          adjacent to the other copyright notices.
+
+       F. Include, immediately after the copyright notices, a license
+          notice giving the public permission to use the Modified
+          Version under the terms of this License, in the form shown in
+          the Addendum below.
+
+       G. Preserve in that license notice the full lists of Invariant
+          Sections and required Cover Texts given in the Document's
+          license notice.
+
+       H. Include an unaltered copy of this License.
+
+       I. Preserve the section Entitled "History", Preserve its Title,
+          and add to it an item stating at least the title, year, new
+          authors, and publisher of the Modified Version as given on the
+          Title Page.  If there is no section Entitled "History" in the
+          Document, create one stating the title, year, authors, and
+          publisher of the Document as given on its Title Page, then add
+          an item describing the Modified Version as stated in the
+          previous sentence.
+
+       J. Preserve the network location, if any, given in the Document
+          for public access to a Transparent copy of the Document, and
+          likewise the network locations given in the Document for
+          previous versions it was based on.  These may be placed in the
+          "History" section.  You may omit a network location for a work
+          that was published at least four years before the Document
+          itself, or if the original publisher of the version it refers
+          to gives permission.
+
+       K. For any section Entitled "Acknowledgements" or "Dedications",
+          Preserve the Title of the section, and preserve in the section
+          all the substance and tone of each of the contributor
+          acknowledgements and/or dedications given therein.
+
+       L. Preserve all the Invariant Sections of the Document, unaltered
+          in their text and in their titles.  Section numbers or the
+          equivalent are not considered part of the section titles.
+
+       M. Delete any section Entitled "Endorsements".  Such a section
+          may not be included in the Modified Version.
+
+       N. Do not retitle any existing section to be Entitled
+          "Endorsements" or to conflict in title with any Invariant
+          Section.
+
+       O. Preserve any Warranty Disclaimers.
+
+     If the Modified Version includes new front-matter sections or
+     appendices that qualify as Secondary Sections and contain no
+     material copied from the Document, you may at your option designate
+     some or all of these sections as invariant.  To do this, add their
+     titles to the list of Invariant Sections in the Modified Version's
+     license notice.  These titles must be distinct from any other
+     section titles.
+
+     You may add a section Entitled "Endorsements", provided it contains
+     nothing but endorsements of your Modified Version by various
+     parties--for example, statements of peer review or that the text
+     has been approved by an organization as the authoritative
+     definition of a standard.
+
+     You may add a passage of up to five words as a Front-Cover Text,
+     and a passage of up to 25 words as a Back-Cover Text, to the end of
+     the list of Cover Texts in the Modified Version.  Only one passage
+     of Front-Cover Text and one of Back-Cover Text may be added by (or
+     through arrangements made by) any one entity.  If the Document
+     already includes a cover text for the same cover, previously added
+     by you or by arrangement made by the same entity you are acting on
+     behalf of, you may not add another; but you may replace the old
+     one, on explicit permission from the previous publisher that added
+     the old one.
+
+     The author(s) and publisher(s) of the Document do not by this
+     License give permission to use their names for publicity for or to
+     assert or imply endorsement of any Modified Version.
+
+  5. COMBINING DOCUMENTS
+
+     You may combine the Document with other documents released under
+     this License, under the terms defined in section 4 above for
+     modified versions, provided that you include in the combination all
+     of the Invariant Sections of all of the original documents,
+     unmodified, and list them all as Invariant Sections of your
+     combined work in its license notice, and that you preserve all
+     their Warranty Disclaimers.
+
+     The combined work need only contain one copy of this License, and
+     multiple identical Invariant Sections may be replaced with a single
+     copy.  If there are multiple Invariant Sections with the same name
+     but different contents, make the title of each such section unique
+     by adding at the end of it, in parentheses, the name of the
+     original author or publisher of that section if known, or else a
+     unique number.  Make the same adjustment to the section titles in
+     the list of Invariant Sections in the license notice of the
+     combined work.
+
+     In the combination, you must combine any sections Entitled
+     "History" in the various original documents, forming one section
+     Entitled "History"; likewise combine any sections Entitled
+     "Acknowledgements", and any sections Entitled "Dedications".  You
+     must delete all sections Entitled "Endorsements."
+
+  6. COLLECTIONS OF DOCUMENTS
+
+     You may make a collection consisting of the Document and other
+     documents released under this License, and replace the individual
+     copies of this License in the various documents with a single copy
+     that is included in the collection, provided that you follow the
+     rules of this License for verbatim copying of each of the documents
+     in all other respects.
+
+     You may extract a single document from such a collection, and
+     distribute it individually under this License, provided you insert
+     a copy of this License into the extracted document, and follow this
+     License in all other respects regarding verbatim copying of that
+     document.
+
+  7. AGGREGATION WITH INDEPENDENT WORKS
+
+     A compilation of the Document or its derivatives with other
+     separate and independent documents or works, in or on a volume of a
+     storage or distribution medium, is called an "aggregate" if the
+     copyright resulting from the compilation is not used to limit the
+     legal rights of the compilation's users beyond what the individual
+     works permit.  When the Document is included in an aggregate, this
+     License does not apply to the other works in the aggregate which
+     are not themselves derivative works of the Document.
+
+     If the Cover Text requirement of section 3 is applicable to these
+     copies of the Document, then if the Document is less than one half
+     of the entire aggregate, the Document's Cover Texts may be placed
+     on covers that bracket the Document within the aggregate, or the
+     electronic equivalent of covers if the Document is in electronic
+     form.  Otherwise they must appear on printed covers that bracket
+     the whole aggregate.
+
+  8. TRANSLATION
+
+     Translation is considered a kind of modification, so you may
+     distribute translations of the Document under the terms of section
+     4.  Replacing Invariant Sections with translations requires special
+     permission from their copyright holders, but you may include
+     translations of some or all Invariant Sections in addition to the
+     original versions of these Invariant Sections.  You may include a
+     translation of this License, and all the license notices in the
+     Document, and any Warranty Disclaimers, provided that you also
+     include the original English version of this License and the
+     original versions of those notices and disclaimers.  In case of a
+     disagreement between the translation and the original version of
+     this License or a notice or disclaimer, the original version will
+     prevail.
+
+     If a section in the Document is Entitled "Acknowledgements",
+     "Dedications", or "History", the requirement (section 4) to
+     Preserve its Title (section 1) will typically require changing the
+     actual title.
+
+  9. TERMINATION
+
+     You may not copy, modify, sublicense, or distribute the Document
+     except as expressly provided under this License.  Any attempt
+     otherwise to copy, modify, sublicense, or distribute it is void,
+     and will automatically terminate your rights under this License.
+
+     However, if you cease all violation of this License, then your
+     license from a particular copyright holder is reinstated (a)
+     provisionally, unless and until the copyright holder explicitly and
+     finally terminates your license, and (b) permanently, if the
+     copyright holder fails to notify you of the violation by some
+     reasonable means prior to 60 days after the cessation.
+
+     Moreover, your license from a particular copyright holder is
+     reinstated permanently if the copyright holder notifies you of the
+     violation by some reasonable means, this is the first time you have
+     received notice of violation of this License (for any work) from
+     that copyright holder, and you cure the violation prior to 30 days
+     after your receipt of the notice.
+
+     Termination of your rights under this section does not terminate
+     the licenses of parties who have received copies or rights from you
+     under this License.  If your rights have been terminated and not
+     permanently reinstated, receipt of a copy of some or all of the
+     same material does not give you any rights to use it.
+
+  10. FUTURE REVISIONS OF THIS LICENSE
+
+     The Free Software Foundation may publish new, revised versions of
+     the GNU Free Documentation License from time to time.  Such new
+     versions will be similar in spirit to the present version, but may
+     differ in detail to address new problems or concerns.  See
+     <http://www.gnu.org/copyleft/>.
+
+     Each version of the License is given a distinguishing version
+     number.  If the Document specifies that a particular numbered
+     version of this License "or any later version" applies to it, you
+     have the option of following the terms and conditions either of
+     that specified version or of any later version that has been
+     published (not as a draft) by the Free Software Foundation.  If the
+     Document does not specify a version number of this License, you may
+     choose any version ever published (not as a draft) by the Free
+     Software Foundation.  If the Document specifies that a proxy can
+     decide which future versions of this License can be used, that
+     proxy's public statement of acceptance of a version permanently
+     authorizes you to choose that version for the Document.
+
+  11. RELICENSING
+
+     "Massive Multiauthor Collaboration Site" (or "MMC Site") means any
+     World Wide Web server that publishes copyrightable works and also
+     provides prominent facilities for anybody to edit those works.  A
+     public wiki that anybody can edit is an example of such a server.
+     A "Massive Multiauthor Collaboration" (or "MMC") contained in the
+     site means any set of copyrightable works thus published on the MMC
+     site.
+
+     "CC-BY-SA" means the Creative Commons Attribution-Share Alike 3.0
+     license published by Creative Commons Corporation, a not-for-profit
+     corporation with a principal place of business in San Francisco,
+     California, as well as future copyleft versions of that license
+     published by that same organization.
+
+     "Incorporate" means to publish or republish a Document, in whole or
+     in part, as part of another Document.
+
+     An MMC is "eligible for relicensing" if it is licensed under this
+     License, and if all works that were first published under this
+     License somewhere other than this MMC, and subsequently
+     incorporated in whole or in part into the MMC, (1) had no cover
+     texts or invariant sections, and (2) were thus incorporated prior
+     to November 1, 2008.
+
+     The operator of an MMC Site may republish an MMC contained in the
+     site under CC-BY-SA on the same site at any time before August 1,
+     2009, provided the MMC is eligible for relicensing.
+
+ADDENDUM: How to use this License for your documents
+====================================================
+
+To use this License in a document you have written, include a copy of
+the License in the document and put the following copyright and license
+notices just after the title page:
+
+       Copyright (C)  YEAR  YOUR NAME.
+       Permission is granted to copy, distribute and/or modify this document
+       under the terms of the GNU Free Documentation License, Version 1.3
+       or any later version published by the Free Software Foundation;
+       with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+       Texts.  A copy of the license is included in the section entitled ``GNU
+       Free Documentation License''.
+
+   If you have Invariant Sections, Front-Cover Texts and Back-Cover
+Texts, replace the "with...Texts." line with this:
+
+         with the Invariant Sections being LIST THEIR TITLES, with
+         the Front-Cover Texts being LIST, and with the Back-Cover Texts
+         being LIST.
+
+   If you have Invariant Sections without Cover Texts, or some other
+combination of the three, merge those two alternatives to suit the
+situation.
+
+   If your document contains nontrivial examples of program code, we
+recommend releasing these examples in parallel under your choice of free
+software license, such as the GNU General Public License, to permit
+their use in free software.
+
+
+File: guile-sdl2.info,  Node: Index,  Prev: Copying This Manual,  Up: Top
+
+Index
+*****
+
+ [index ]
+* Menu:
+
+* %default-chunk-size:                   Sound.               (line  12)
+* %default-format:                       Sound.               (line  10)
+* %default-frequency:                    Sound.               (line   8)
+* blit-scaled:                           Surfaces.            (line 139)
+* blit-surface:                          Surfaces.            (line 135)
+* bytevector->surface:                   Surfaces.            (line  63)
+* call-with-gl-context:                  OpenGL.              (line  12)
+* call-with-renderer:                    Rendering.           (line  26)
+* call-with-surface:                     Surfaces.            (line  71)
+* call-with-window:                      Windows.             (line  21)
+* channel-paused?:                       Sound.               (line  98)
+* channel-playing?:                      Sound.               (line  92)
+* chunk?:                                Sound.               (line  56)
+* clear-renderer:                        Rendering.           (line  30)
+* close-audio:                           Sound.               (line  53)
+* close-game-controller:                 Game Controllers.    (line  20)
+* close-joystick:                        Joysticks.           (line  15)
+* close-window!:                         Windows.             (line  18)
+* color-a:                               Surfaces.            (line  17)
+* color-b:                               Surfaces.            (line  15)
+* color-g:                               Surfaces.            (line  13)
+* color-r:                               Surfaces.            (line  11)
+* color?:                                Surfaces.            (line   8)
+* controller-added-event?:               Events.              (line 245)
+* controller-axis-event-axis:            Events.              (line 218)
+* controller-axis-event-timestamp:       Events.              (line 214)
+* controller-axis-event-value:           Events.              (line 220)
+* controller-axis-event-which:           Events.              (line 216)
+* controller-axis-event?:                Events.              (line 211)
+* controller-button-down-event?:         Events.              (line 228)
+* controller-button-event-button:        Events.              (line 236)
+* controller-button-event-pressed?:      Events.              (line 238)
+* controller-button-event-timestamp:     Events.              (line 232)
+* controller-button-event-which:         Events.              (line 234)
+* controller-button-event?:              Events.              (line 225)
+* controller-button-up-event?:           Events.              (line 230)
+* controller-device-event-action:        Events.              (line 261)
+* controller-device-event-timestamp:     Events.              (line 257)
+* controller-device-event-which:         Events.              (line 259)
+* controller-device-event?:              Events.              (line 242)
+* controller-remapped-event?:            Events.              (line 253)
+* controller-removed-event?:             Events.              (line 249)
+* convert-surface-format:                Surfaces.            (line  93)
+* delete-chunk!:                         Sound.               (line  62)
+* delete-font!:                          Fonts.               (line  18)
+* delete-gl-context!:                    OpenGL.              (line   9)
+* delete-music!:                         Sound.               (line 110)
+* delete-renderer!:                      Rendering.           (line  23)
+* delete-surface!:                       Surfaces.            (line  68)
+* delete-texture!:                       Rendering.           (line  58)
+* fill-rect:                             Surfaces.            (line 143)
+* font-height:                           Fonts.               (line  21)
+* game-controller-attached?:             Game Controllers.    (line  26)
+* game-controller-axis:                  Game Controllers.    (line  35)
+* game-controller-button-pressed?:       Game Controllers.    (line  47)
+* game-controller-index?:                Game Controllers.    (line  67)
+* game-controller-joystick:              Game Controllers.    (line  29)
+* game-controller-name:                  Game Controllers.    (line  32)
+* game-controller?:                      Game Controllers.    (line  23)
+* hide-window!:                          Windows.             (line  41)
+* id->window:                            Windows.             (line  37)
+* image-init:                            Images.              (line   8)
+* image-quit:                            Images.              (line  11)
+* joystick-axis-event-button:            Events.              (line 166)
+* joystick-axis-event-pressed?:          Events.              (line 168)
+* joystick-axis-event-timestamp:         Events.              (line 162)
+* joystick-axis-event-which:             Events.              (line 164)
+* joystick-axis-event?:                  Events.              (line 159)
+* joystick-ball-event-ball:              Events.              (line 179)
+* joystick-ball-event-timestamp:         Events.              (line 175)
+* joystick-ball-event-which:             Events.              (line 177)
+* joystick-ball-event-x-rel:             Events.              (line 181)
+* joystick-ball-event-y-rel:             Events.              (line 183)
+* joystick-ball-event?:                  Events.              (line 172)
+* joystick-device-event-action:          Events.              (line 207)
+* joystick-device-event-timestamp:       Events.              (line 203)
+* joystick-device-event-which:           Events.              (line 205)
+* joystick-device-event?:                Events.              (line 200)
+* joystick-hat-event-hat:                Events.              (line 194)
+* joystick-hat-event-timestamp:          Events.              (line 190)
+* joystick-hat-event-value:              Events.              (line 196)
+* joystick-hat-event-which:              Events.              (line 192)
+* joystick-hat-event?:                   Events.              (line 187)
+* joystick-instance-id:                  Joysticks.           (line  18)
+* joystick-num-axes:                     Joysticks.           (line  25)
+* joystick-num-balls:                    Joysticks.           (line  28)
+* joystick-num-buttons:                  Joysticks.           (line  31)
+* joystick-num-hats:                     Joysticks.           (line  34)
+* joystick-power-level:                  Joysticks.           (line  21)
+* key-pressed?:                          Keyboard.            (line   8)
+* key-released?:                         Keyboard.            (line  11)
+* keyboard-down-event?:                  Events.              (line  76)
+* keyboard-event-key:                    Events.              (line  90)
+* keyboard-event-modifiers:              Events.              (line  94)
+* keyboard-event-pressed?:               Events.              (line  86)
+* keyboard-event-repeat?:                Events.              (line  88)
+* keyboard-event-scancode:               Events.              (line  92)
+* keyboard-event-timestamp:              Events.              (line  82)
+* keyboard-event-window-id:              Events.              (line  84)
+* keyboard-event?:                       Events.              (line  73)
+* keyboard-up-event?:                    Events.              (line  79)
+* load-bmp:                              Surfaces.            (line  75)
+* load-chunk:                            Sound.               (line  59)
+* load-font:                             Fonts.               (line  14)
+* load-game-controller-mappings!:        Game Controllers.    (line   8)
+* load-image:                            Images.              (line  14)
+* load-music:                            Sound.               (line 107)
+* make-controller-axis-event:            Events.              (line 209)
+* make-controller-button-event:          Events.              (line 222)
+* make-controller-device-event:          Events.              (line 240)
+* make-gl-context:                       OpenGL.              (line   6)
+* make-joystick-axis-event:              Events.              (line 157)
+* make-joystick-ball-event:              Events.              (line 170)
+* make-joystick-device-event:            Events.              (line 198)
+* make-joystick-hat-event:               Events.              (line 185)
+* make-keyboard-event:                   Events.              (line  70)
+* make-mouse-button-event:               Events.              (line 107)
+* make-mouse-motion-event:               Events.              (line 135)
+* make-quit-event:                       Events.              (line   8)
+* make-rect:                             Rects.               (line   8)
+* make-renderer:                         Rendering.           (line   8)
+* make-rgb-surface:                      Surfaces.            (line  59)
+* make-text-input-event:                 Events.              (line  96)
+* make-window:                           Windows.             (line   6)
+* make-window-event:                     Events.              (line  15)
+* maximize-window!:                      Windows.             (line  47)
+* minimize-window!:                      Windows.             (line  50)
+* mixer-init:                            Sound.               (line  14)
+* mixer-quit:                            Sound.               (line  26)
+* mouse-button-down-event?:              Events.              (line 113)
+* mouse-button-event-button:             Events.              (line 125)
+* mouse-button-event-clicks:             Events.              (line 129)
+* mouse-button-event-pressed?:           Events.              (line 127)
+* mouse-button-event-timestamp:          Events.              (line 119)
+* mouse-button-event-which:              Events.              (line 123)
+* mouse-button-event-window-id:          Events.              (line 121)
+* mouse-button-event-x:                  Events.              (line 131)
+* mouse-button-event-y:                  Events.              (line 133)
+* mouse-button-event?:                   Events.              (line 110)
+* mouse-button-pressed?:                 Mouse.               (line  14)
+* mouse-button-released?:                Mouse.               (line  17)
+* mouse-button-up-event?:                Events.              (line 116)
+* mouse-motion-event-buttons:            Events.              (line 147)
+* mouse-motion-event-timestamp:          Events.              (line 141)
+* mouse-motion-event-which:              Events.              (line 145)
+* mouse-motion-event-window-id:          Events.              (line 143)
+* mouse-motion-event-x:                  Events.              (line 149)
+* mouse-motion-event-x-rel:              Events.              (line 153)
+* mouse-motion-event-y:                  Events.              (line 151)
+* mouse-motion-event-y-rel:              Events.              (line 155)
+* mouse-motion-event?:                   Events.              (line 138)
+* mouse-x:                               Mouse.               (line   8)
+* mouse-y:                               Mouse.               (line  11)
+* music-paused?:                         Sound.               (line 140)
+* music-playing?:                        Sound.               (line 137)
+* music-volume:                          Sound.               (line 121)
+* music?:                                Sound.               (line 104)
+* num-joysticks:                         Joysticks.           (line   8)
+* open-audio:                            Sound.               (line  29)
+* open-game-controller:                  Game Controllers.    (line  16)
+* open-joystick:                         Joysticks.           (line  11)
+* palette-colors:                        Surfaces.            (line  25)
+* palette-length:                        Surfaces.            (line  22)
+* palette?:                              Surfaces.            (line  19)
+* pause-channel!:                        Sound.               (line  80)
+* pause-music!:                          Sound.               (line 124)
+* paused-channels-count:                 Sound.               (line 101)
+* pixel-format-alpha-mask:               Surfaces.            (line  55)
+* pixel-format-bits-per-pixel:           Surfaces.            (line  37)
+* pixel-format-blue-mask:                Surfaces.            (line  51)
+* pixel-format-bytes-per-pixel:          Surfaces.            (line  40)
+* pixel-format-green-mask:               Surfaces.            (line  47)
+* pixel-format-name:                     Surfaces.            (line  31)
+* pixel-format-palette:                  Surfaces.            (line  34)
+* pixel-format-red-mask:                 Surfaces.            (line  43)
+* pixel-format?:                         Surfaces.            (line  28)
+* play-chunk!:                           Sound.               (line  69)
+* play-music!:                           Sound.               (line 113)
+* playing-channels-count:                Sound.               (line  95)
+* poll-event:                            Events.              (line 263)
+* present-renderer:                      Rendering.           (line  33)
+* quit-event-timestamp:                  Events.              (line  13)
+* quit-event?:                           Events.              (line  10)
+* raise-window!:                         Windows.             (line  53)
+* rect-height:                           Rects.               (line  21)
+* rect-width:                            Rects.               (line  18)
+* rect-x:                                Rects.               (line  12)
+* rect-y:                                Rects.               (line  15)
+* render-copy:                           Rendering.           (line  36)
+* render-draw-line:                      Rendering.           (line  40)
+* render-draw-lines:                     Rendering.           (line  44)
+* render-draw-point:                     Rendering.           (line  48)
+* render-draw-points:                    Rendering.           (line  51)
+* render-font-blended:                   Fonts.               (line  28)
+* render-font-solid:                     Fonts.               (line  24)
+* renderer?:                             Rendering.           (line  20)
+* restore-window!:                       Windows.             (line  56)
+* resume-channel!:                       Sound.               (line  84)
+* resume-music!:                         Sound.               (line 127)
+* rewind-music!:                         Sound.               (line 130)
+* save-png:                              Images.              (line  17)
+* sdl-init:                              Basics.              (line   8)
+* sdl-quit:                              Basics.              (line  17)
+* sdl-ticks:                             Basics.              (line  25)
+* sdl-version:                           Basics.              (line  21)
+* set-channel-volume!:                   Sound.               (line  74)
+* set-chunk-volume!:                     Sound.               (line  65)
+* set-gl-attribute!:                     OpenGL.              (line  19)
+* set-gl-swap-interval!:                 OpenGL.              (line  46)
+* set-music-volume!:                     Sound.               (line 117)
+* set-window-border!:                    Windows.             (line  59)
+* set-window-fullscreen!:                Windows.             (line  74)
+* set-window-position!:                  Windows.             (line  66)
+* set-window-size!:                      Windows.             (line  70)
+* set-window-title!:                     Windows.             (line  63)
+* show-window!:                          Windows.             (line  44)
+* stop-channel!:                         Sound.               (line  88)
+* stop-music!:                           Sound.               (line 134)
+* surface->texture:                      Rendering.           (line  55)
+* surface-height:                        Surfaces.            (line  81)
+* surface-pitch:                         Surfaces.            (line  84)
+* surface-pixel-format:                  Surfaces.            (line  90)
+* surface-pixels:                        Surfaces.            (line  87)
+* surface-width:                         Surfaces.            (line  78)
+* swap-gl-window:                        OpenGL.              (line  16)
+* text-input-event-text:                 Events.              (line 105)
+* text-input-event-timestamp:            Events.              (line 101)
+* text-input-event-window-id:            Events.              (line 103)
+* text-input-event?:                     Events.              (line  98)
+* ttf-init:                              Fonts.               (line   8)
+* ttf-quit:                              Fonts.               (line  11)
+* window-closed-event?:                  Events.              (line  59)
+* window-enter-event?:                   Events.              (line  47)
+* window-event-timestamp:                Events.              (line  62)
+* window-event-type:                     Events.              (line  66)
+* window-event-vector:                   Events.              (line  68)
+* window-event-window-id:                Events.              (line  64)
+* window-event?:                         Events.              (line  17)
+* window-exposed-event?:                 Events.              (line  26)
+* window-focus-gained-event?:            Events.              (line  53)
+* window-focus-lost-event?:              Events.              (line  56)
+* window-hidden-event?:                  Events.              (line  23)
+* window-id:                             Windows.             (line  34)
+* window-leave-event?:                   Events.              (line  50)
+* window-maximized-event?:               Events.              (line  41)
+* window-minimized-event?:               Events.              (line  38)
+* window-moved-event?:                   Events.              (line  29)
+* window-position:                       Windows.             (line  31)
+* window-resized-event?:                 Events.              (line  32)
+* window-restored-event?:                Events.              (line  44)
+* window-shown-event?:                   Events.              (line  20)
+* window-size:                           Windows.             (line  28)
+* window-size-changed-event?:            Events.              (line  35)
+* window-title:                          Windows.             (line  25)
+
+
+
+Tag Table:
+Node: Top742
+Node: Introduction1835
+Node: Installation2787
+Node: Requirements3381
+Node: API Reference3987
+Node: Basics4737
+Node: Window Management5632
+Node: Windows5922
+Node: OpenGL8780
+Node: Input10703
+Node: Keyboard11030
+Node: Mouse11346
+Node: Joysticks11849
+Node: Game Controllers12933
+Node: Events14971
+Node: Rects21931
+Node: Surfaces22497
+Node: Rendering26573
+Node: Images28579
+Node: Sound29060
+Node: Fonts33216
+Node: Contributing34162
+Node: Getting the Source34457
+Node: Submitting Patches35031
+Node: Chat35281
+Node: Copying This Manual35524
+Node: GNU Free Documentation License35764
+Node: Index60881
+
+End Tag Table

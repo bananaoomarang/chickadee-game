@@ -1,0 +1,3562 @@
+This is chickadee.info, produced by makeinfo version 6.5 from
+chickadee.texi.
+
+Copyright (C) 2017, 2018, 2019 David Thompson <davet@gnu.org>
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.3 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled "GNU Free Documentation License".
+
+     A copy of the license is also available from the Free Software
+     Foundation Web site at <http://www.gnu.org/licenses/fdl.html>.
+
+   The document was typeset with GNU Texinfo (http://www.texinfo.org/).
+
+INFO-DIR-SECTION The Algorithmic Language Scheme
+START-INFO-DIR-ENTRY
+* Chickadee: (chickadee).     Game programming toolkit for Guile.
+END-INFO-DIR-ENTRY
+
+
+File: chickadee.info,  Node: Top,  Next: Installation,  Up: (dir)
+
+Chickadee
+*********
+
+Copyright (C) 2017, 2018, 2019 David Thompson <davet@gnu.org>
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.3 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled "GNU Free Documentation License".
+
+     A copy of the license is also available from the Free Software
+     Foundation Web site at <http://www.gnu.org/licenses/fdl.html>.
+
+   The document was typeset with GNU Texinfo (http://www.texinfo.org/).
+
+* Menu:
+
+* Installation::                Installing Chickadee.
+* API Reference::               Chickadee API reference.
+
+* Copying This Manual::         The GNU Free Documentation License and you!
+* Index::
+
+
+File: chickadee.info,  Node: Installation,  Next: API Reference,  Prev: Top,  Up: Top
+
+1 Installation
+**************
+
+Chickadee is available for download from its website at
+<dthompson.us/projects/chickadee.html>.  This section describes the
+software requirements of Chickadee, as well as how to install it.
+
+   The build procedure for Chickadee is the same as for GNU software
+packages, and is not covered here.  Please see the files 'README' and
+'INSTALL' for additional details.
+
+* Menu:
+
+* Requirements::                Software needed to build and run Chickadee.
+
+
+File: chickadee.info,  Node: Requirements,  Up: Installation
+
+1.1 Requirements
+================
+
+Chickadee depends on the following packages:
+
+   * GNU Guile (https://gnu.org/software/guile), version 2.1.0 or later;
+   * GNU guile-opengl (https://gnu.org/software/guile-opengl), version
+     0.1 or later.
+   * guile-sdl2 (https://dthompson.us/pages/software/guile-sdl2.html),
+     version 0.2.0 or later;
+
+   Additionally, Chickadee depends on being able to create an OpenGL 3.3
+context at runtime, which means that some older computers may not be
+able to run games written with Chickadee.
+
+
+File: chickadee.info,  Node: API Reference,  Next: Copying This Manual,  Prev: Installation,  Up: Top
+
+2 API Reference
+***************
+
+* Menu:
+
+* Kernel::                      The fundamental components.
+* Math::                        Linear algebra, spatial partitioning, and more.
+* Graphics::                    Eye candy.
+* Scripting::                   Bringing the game world to life.
+
+
+File: chickadee.info,  Node: Kernel,  Next: Math,  Up: API Reference
+
+2.1 Kernel
+==========
+
+At the very core of Chickadee, in the '(chickadee game-loop)' module,
+lies an event loop.  This loop, or "kernel", is responsible for ensuring
+that the game is updated at the desired interval, rendering the current
+state of the game world, and handling errors if they occur.  The kernel
+implements what is known as a "fixed timestep" game loop, meaning that
+the game simulation will be advanced by a fixed interval of time and
+will never vary from frame to frame, unlike some other styles of game
+loops.  The appropriately named 'run-game*' and 'abort-game' procedures
+are the entry and exit points to the Chickadee game loop kernel.
+
+   On its own, the kernel does not do very much at all.  In order to
+actually respond to input events, update game state, or render output,
+the programmer must provide an engine.  But don’t worry, you don’t have
+to start from scratch!  Chickadee comes with a simple engine that uses
+SDL to create a graphical window and handle input devices, and OpenGL to
+handle rendering.  This default engine is enough for most users to get
+started writing games quickly.  More advanced users may want to write a
+custom engine that uses a different I/O system.  Perhaps you are writing
+a text adventure or roguelike that reads from and writes to a terminal
+instead of a graphical window.  The game loop kernel makes no
+assumptions.
+
+ -- Procedure: run-game [#:update] [#:render] [#:time] [#:error]
+          [#:update-hz 60]
+
+     Start the game loop.  This procedure will not return until
+     'abort-game' is called.
+
+     The core game loop is generic and requires four additional
+     procedures to operate:
+
+        * UPDATE: Called UPDATE-HZ times per second to advance the game
+          simulation.  This procedure is called with a single argument:
+          The amount of time that has passed since the last update, in
+          milliseconds.
+        * RENDER: Called each iteration of the loop to render the game
+          to the desired output device.  This procedure is called with a
+          single argument: A value in the range [0, 1] which represents
+          how much time has past since the last game state update
+          relative to the upcoming game state update, as a percentage.
+          Because the game state is updated independent of rendering, it
+          is often the case that rendering is occuring between two
+          updates.  If the game is rendered as it was during the last
+          update, a strange side-effect will occur that makes animation
+          appear rough or "choppy".  To counter this, the ALPHA value
+          can be used to perfrom a linear interpolation of a moving
+          object between its current position and its previous position.
+          This odd trick has the pleasing result of making the animation
+          look smooth again, but requires keeping track of previous
+          state.
+        * TIME: Called to get the current time in milliseconds.  This
+          procedure is called with no arguments.
+        * ERROR: Called when an error from the UPDATE or RENDER
+          procedures reaches the game loop.  This procedure is called
+          with three arguments: The call stack, the error key, and the
+          error arguments.  If no error handler is provided, the default
+          behavior is to simply re-throw the error.
+
+ -- Procedure: abort-game
+     Stop the currently running Chickadee game loop.
+
+   Since most users will want to write 2D/3D games with hardware
+accelerated graphics rendering, controlled via keyboard, mouse, or game
+controller, Chickadee comes with an easy to use engine just for this
+purpose in the '(chickadee)' module: 'run-game'.
+
+ -- Procedure: run-game [#:window-title "Chickadee!"] [#:window-width
+          640] [#:window-height 480] [#:window-fullscreen? '#f']
+          [#:update-hz 60] [#:load] [#:update] [#:draw] [#:quit]
+          [#:key-press] [#:key-release] [#:text-input] [#:mouse-press]
+          [#:mouse-release] [#:mouse-move] [#:controller-add]
+          [#:controller-remove] [#:controller-press]
+          [#:controller-release] [#:controller-move] [#:error]
+
+     Run the Chickadee game loop using the SDL engine in OpenGL mode.
+
+     A new graphical window will be opened with WINDOW-WIDTH x
+     WINDOW-HEIGHT as its dimensions, WINDOW-TITLE as its title, and in
+     fullscreen mode if WINDOW-FULLSCREEN? is '#t'.
+
+        * LOAD: Called with zero arguments when the game window has
+          opened but before the game loop has started.  Can be used to
+          perform initialization that requires an open window and OpenGL
+          context such as loading textures.
+
+        * UPDATE: Called UPDATE-HZ times per second with one argument:
+          The amount of time to advance the game simulation.
+
+        * DRAW: Called each time a frame should be rendered with a
+          single argument known as the 'alpha' value.  See the
+          documentation for 'run-game' for an explanation of this value.
+
+        * QUIT: Called with zero arguments when the user tries to close
+          the game window.  The default behavior is to exit the game.
+
+        * KEY-PRESS: Called with four arguments when a key is pressed on
+          the keyboard:
+
+            1. KEY: The symbolic name of the "virtual" key that was
+               pressed.  For example: 'backspace'.  It's called a
+               virtual key because the operating system may map a
+               physical keyboard key to another key entirely, such as
+               how the author likes to bind the "caps lock" key to mean
+               "control".
+
+            2. SCANCODE: The symbolic name of the physical key that was
+               pressed.
+
+            3. MODIFIERS: A list of the symbolic names of modifier keys
+               that were being held down when the key was pressed.
+               Possible values include 'ctrl', 'alt', and 'shift'.
+
+            4. REPEAT?: '#t' if this is a repeated press of the same
+               key.
+
+        * KEY-RELEASE: Called with three arguments when a key is
+          released on the keyboard:
+
+            1. KEY: The symbolic name of the "virtual" key that was
+               released.
+
+            2. SCANCODE: The symbolic name of the physical key that was
+               released.
+
+            3. MODIFIERS: A list of the symbolic names of modifier keys
+               that were being held down when the key was released.
+
+        * TEXT-INPUT: Called with a single argument, a string of text,
+          when printable text is typed on the keyboard.
+
+        * MOUSE-PRESS: Called with four arguments when a mouse button is
+          pressed:
+
+            1. BUTTON: The symbolic name of the button that was pressed,
+               such as 'left', 'middle', or 'right'.
+
+            2. CLICKS: The number of times the button has been clicked
+               in a row.
+
+            3. X: The x coordinate of the mouse cursor.
+
+            4. Y: The y coordinate of the mouse cursor.
+
+        * MOUSE-RELEASE: Called with three arguments when a mouse button
+          is released:
+
+            1. BUTTON: The symbolic name of the button that was
+               released.
+
+            2. X: The x coordinate of the mouse cursor.
+
+            3. Y: The y coordinate of the mouse cursor.
+
+        * MOUSE-MOVE: Called with five arguments when the mouse is
+          moved:
+
+            1. X: The x coordinate of the mouse cursor.
+
+            2. Y: The y coordinate of the mouse cursor.
+
+            3. DX: The amount the mouse has moved along the x axis since
+               the last mouse move event.
+
+            4. DY: The amount the mouse has moved along the y axis since
+               the last mouse move event.
+
+            5. BUTTONS: A list of the buttons that were pressed down
+               when the mouse was moved.
+
+        * CONTROLLER-ADD: Called with a single argument, an SDL game
+          controller object, when a game controller is connected.
+
+        * CONTROLLER-REMOVE: Called with a single argument, an SDL game
+          controller object, when a game controller is disconnected.
+
+        * CONTROLLER-PRESS: Called with two arguments when a button on a
+          game controller is pressed:
+
+            1. CONTROLLER: The controller that triggered the event.
+
+            2. BUTTON: The symbolic name of the button that was pressed.
+               Possible buttons are:
+
+                  * 'a'
+                  * 'b'
+                  * 'x'
+                  * 'y'
+                  * 'back'
+                  * 'guide'
+                  * 'start'
+                  * 'left-stick'
+                  * 'right-stick'
+                  * 'left-shoulder'
+                  * 'right-shoulder'
+                  * 'dpad-up'
+                  * 'dpad-down'
+                  * 'dpad-left'
+                  * 'dpad-right'
+
+        * CONTROLLER-RELEASE: Called with two arguments when a button on
+          a game controller is released:
+
+            1. CONTROLLER: The controller that triggered the event.
+
+            2. BUTTON: The symbolic name of the button that was
+               released.
+
+        * CONTROLLER-MOVE: Called with three arguments when an analog
+          stick or trigger on a game controller is moved:
+
+            1. CONTROLLER: The controller that triggered the event.
+
+            2. AXIS: The symbolic name of the axis that was moved.
+               Possible values are:
+
+                  * 'left-x'
+                  * 'left-y'
+                  * 'right-x'
+                  * 'right-y'
+                  * 'trigger-left'
+                  * 'trigger-right'
+
+        * ERROR: Called with three arguments when an error occurs:
+
+            1. STACK: The call stack at the point of error.
+
+            2. KEY: The exception key.
+
+            3. ARGS: The arguments thrown with the exception.
+
+          The default behavior is to re-throw the error.
+
+2.1.1 Live Coding
+-----------------
+
+One of the biggest appeals of any Lisp dialect is the ability to use the
+"read-eval-print loop" (REPL for short) to build programs iteratively
+and interactively while the program is running.  However, programs that
+run in an event loop and respond to user input (such as a video game)
+require special care for this workflow to be pleasant.  Chickadee
+provides no built-in support for live coding, but it's fairly easy to
+hook up a special kind of REPL yourself.
+
+   First, create a cooperative REPL server (It's important to use
+Guile's cooperative REPL server instead of the standard REPL server in
+'(system repl server)' to avoid thread synchronization issues):
+
+     (use-modules (system repl coop-server))
+
+     (define repl (spawn-coop-repl-server))
+
+   Then, in the game loop's update procedure, add this:
+
+     (poll-coop-repl-server repl)
+
+   To use the REPL, connect to it via port 37146.  Telnet will do the
+trick, but using the Geiser (https://www.nongnu.org/geiser/) extension
+for Emacs is by far the best way to develop at the REPL with Guile.  Use
+'M-x connect-to-guile' to connect to the REPL server.
+
+   Happy hacking!
+
+
+File: chickadee.info,  Node: Math,  Next: Graphics,  Prev: Kernel,  Up: API Reference
+
+2.2 Math
+========
+
+Chickadee contains data types and procedures for performing the most
+common computations in video game simulations such as linear algebra
+with vectors and matrices and axis-aligned bounding box collision
+detection.
+
+* Menu:
+
+* Basics::                      Commonly used, miscellaneous things.
+* Vectors::                     Euclidean vectors.
+* Rectangles::                  Axis-aligned bounding boxes.
+* Grid::                        Spatial partitioning for bounding boxes.
+* Matrices::                    Transformation matrices.
+* Quaternions::                 Rotations about an arbitrary axis.
+* Easings::                     Easing functions for interesting animations.
+* Bezier Curves::               Cubic Bezier curves and paths in 2D space.
+* Path Finding::                Generic A* path finding.
+
+
+File: chickadee.info,  Node: Basics,  Next: Vectors,  Up: Math
+
+2.2.1 Basics
+------------
+
+ -- Variable: pi
+     An essential constant for all trigonometry.  Pi is the ratio of a
+     circle's circumferences to its diameter.  Since pi is an irrational
+     number, the PI in Chickadee is a mere floating point approximation
+     that is "good enough."
+
+ -- Variable: pi/2
+     Half of PI.
+
+ -- Procedure: cotan z
+     Return the cotangent of Z.
+
+
+File: chickadee.info,  Node: Vectors,  Next: Rectangles,  Prev: Basics,  Up: Math
+
+2.2.2 Vectors
+-------------
+
+Unlike Scheme's vector data type, which is a sequence of arbitrary
+Scheme objects, Chickadee's '(chickadee math vector)' module provides
+vectors in the linear algebra sense: Sequences of numbers specialized
+for particular coordinate spaces.  As of now, Chickadee provides 2D and
+3D vectors, with 4D vector support coming in a future release.
+
+   Here's a quick example of adding two vectors:
+
+     (define v (vec2+ (vec2 1 2) (vec2 3 4)))
+
+   Since vectors are used so frequently, the reader macro '#v' is used
+to cut down on typing:
+
+     (define v (vec2+ #v(1 2) #v(3 4)))
+
+2.2.2.1 A Note About Performance
+................................
+
+A lot of time has been spent making Chickadee's vector operations
+perform relatively efficiently in critical code paths where excessive
+garbage generation will cause major performance issues.  The general
+rule is that procedures ending with '!' perform an in-place modification
+of one of the arguments in order to avoid allocating a new vector.
+These procedures are also inlined by Guile's compiler in order to take
+advantage of optimizations relating to floating point math operations.
+The downside is that since these are not pure functions, they do not
+compose well and create more verbose code.
+
+2.2.2.2 2D Vectors
+..................
+
+ -- Procedure: vec2 x y
+     Return a new 2D vector with coordinates (X, Y).
+
+ -- Procedure: vec2/polar r theta
+     Return a new 2D vector containing the Cartesian representation of
+     the polar coordinate (R, THETA).  The angle THETA is measured in
+     radians.
+
+ -- Procedure: vec2? obj
+     Return '#t' if OBJ is a 2D vector.
+
+ -- Procedure: vec2-x v
+     Return the X coordinate of the 2D vector V.
+
+ -- Procedure: vec2-y v
+     Return the Y coordinate of the 2D vector V.
+
+ -- Procedure: vec2-copy v
+     Return a fresh copy of the 2D vector V.
+
+ -- Procedure: vec2-magnitude v
+     Return the magnitude of the 2D vector V.
+
+ -- Procedure: vec2-dot-product v1 v2
+     Return the dot product of the 2D vectors V1 and V2.
+
+ -- Procedure: vec2-normalize v
+     Return the normalized form of the 2D vector V.
+
+ -- Procedure: vec2+ v x
+     Add X, either a 2D vector or a scalar (i.e.  a real number), to the
+     2D vector V and return a new vector containing the sum.
+
+ -- Procedure: vec2- v x
+     Subtract X, either a 2D vector or a scalar, from the 2D vector V
+     and return a new vector containing the difference.
+
+ -- Procedure: vec2* v x
+     Multiply the 2D vector V by X, a 2D vector or a scalar, and return
+     a new vector containing the product.
+
+ -- Procedure: set-vec2-x! v x
+     Set the X coordinate of the 2D vector V to X.
+
+ -- Procedure: set-vec2-y! v y
+     Set the Y coordinate of the 2D vector V to Y.
+
+ -- Procedure: set-vec2! v x y
+     Set the X and Y coordinates of the 2D vector V to X and Y,
+     respectively.
+
+ -- Procedure: vec2-copy! source target
+     Copy the 2D vector SOURCE into the 2D vector TARGET.
+
+ -- Procedure: vec2-add! v x
+     Perform an in-place modification of the 2D vector V by adding X, a
+     2D vector or a scalar.
+
+ -- Procedure: vec2-sub! v x
+     Perform an in-place modification of the 2D vector V by subtracting
+     X, a 2D vector or a scalar.
+
+ -- Procedure: vec2-mult! v x
+     Perform an in-place modification of the 2D vector V by multiplying
+     it by X, a 2D vector or a scalar.
+
+2.2.2.3 3D Vectors
+..................
+
+ -- Procedure: vec3 x y
+     Return a new 2D vector with coordinates (X, Y).
+
+ -- Procedure: vec3? obj
+     Return '#t' if OBJ is a 3D vector.
+
+ -- Procedure: vec3-x v
+     Return the X coordinate of the 3D vector V.
+
+ -- Procedure: vec3-y v
+     Return the Y coordinate of the 3D vector V.
+
+ -- Procedure: vec3-z v
+     Return the Z coordinate of the 3D vector V.
+
+ -- Procedure: vec3-copy v
+     Return a fresh copy of the 3D vector V.
+
+ -- Procedure: vec3-magnitude v
+     Return the magnitude of the 3D vector V.
+
+ -- Procedure: vec3-dot-product v1 v2
+     Return the dot product of the 3D vectors V1 and V2.
+
+ -- Procedure: vec3-normalize v
+     Return the normalized form of the 3D vector V.
+
+ -- Procedure: vec3+ v x
+     Add X, either a 3D vector or a scalar (i.e.  a real number), to the
+     3D vector V and return a new vector containing the sum.
+
+ -- Procedure: vec3- v x
+     Subtract X, either a 3D vector or a scalar, from the 3D vector V
+     and return a new vector containing the difference.
+
+ -- Procedure: vec3* v x
+     Multiply the 3D vector V by X, a 3D vector or a scalar, and return
+     a new vector containing the product.
+
+ -- Procedure: set-vec3-x! v x
+     Set the X coordinate of the 3D vector V to X.
+
+ -- Procedure: set-vec3-y! v y
+     Set the Y coordinate of the 3D vector V to Y.
+
+ -- Procedure: set-vec3-z! v z
+     Set the Z coordinate of the 3D vector V to Z.
+
+ -- Procedure: set-vec3! v x y z
+     Set the X, Y, and Z coordinates of the 3D vector V to X, Y, and Z,
+     respectively.
+
+ -- Procedure: vec3-copy! source target
+     Copy the 3D vector SOURCE into the 3D vector TARGET.
+
+ -- Procedure: vec3-add! v x
+     Perform an in-place modification of the 3D vector V by adding X, a
+     3D vector or a scalar.
+
+ -- Procedure: vec3-sub! v x
+     Perform an in-place modification of the 3D vector V by subtracting
+     X, a 3D vector or a scalar.
+
+ -- Procedure: vec3-mult! v x
+     Perform an in-place modification of the 3D vector V by multiplying
+     it by X, a 3D vector or a scalar.
+
+
+File: chickadee.info,  Node: Rectangles,  Next: Grid,  Prev: Vectors,  Up: Math
+
+2.2.3 Rectangles
+----------------
+
+The '(chickadee math rect)' module provides an API for manipulating
+axis-aligned bounding boxes (AABBs).  AABBs are often used for collision
+detection in games.  Common use-cases are defining "hitboxes" in
+platformers or using them for the "broad phase" of a collision detection
+algorithm that uses a more complex (and thus slower) method of
+determining the actual collisions.
+
+   Like some of the other math modules, there exists a collection of
+functions that do in-place modification of rectangles for use in
+performance critical code paths.
+
+ -- Procedure: rect x y width height
+ -- Procedure: make-rect X Y WIDTH HEIGHT
+     Create a new rectangle that is WIDTH by HEIGHT in size and whose
+     bottom-left corner is located at (X, Y).
+
+ -- Procedure: rect? obj
+     Return '#t' if OBJ is a rectangle.
+
+ -- Procedure: rect-within? rect1 rect2
+     Return '#t' if RECT2 is completely within RECT1.
+
+ -- Procedure: rect-intersects? rect1 rect2
+     Return '#t' if RECT2 overlaps RECT1.
+
+ -- Procedure: rect-contains? rect x y
+     Return '#t' if the coordinates (X, Y) are within RECT.
+
+ -- Procedure: rect-contains-vec2? rect v
+     Return '#t' if the 2D vector V is within the bounds of RECT.
+
+ -- Procedure: rect-x rect
+     Return the X coordinate of the lower-left corner of RECT.
+
+ -- Procedure: rect-y rect
+     Return the Y coordinate of the lower-left corner of RECT.
+
+ -- Procedure: rect-left rect
+     Return the left-most X coordinate of RECT.
+
+ -- Procedure: rect-right rect
+     Return the right-most X coordinate of RECT.
+
+ -- Procedure: rect-bottom rect
+     Return the bottom-most Y coordinate of RECT.
+
+ -- Procedure: rect-top rect
+     Return the top-most Y coordinate of RECT.
+
+ -- Procedure: rect-center-x rect
+     Return the X coordinate of the center of RECT.
+
+ -- Procedure: rect-center-y rect
+     Return the Y coordinate of the center of RECT.
+
+ -- Procedure: rect-width rect
+     Return the width of RECT.
+
+ -- Procedure: rect-height rect
+     Return the height of RECT.
+
+ -- Procedure: rect-area rect
+     Return the surface area covered by RECT.
+
+ -- Procedure: rect-clamp-x rect x
+     Restrict X to the portion of the X axis covered by RECT.
+
+ -- Procedure: rect-clamp-y rect y
+     Restrict Y to the portion of the Y axis covered by RECT.
+
+ -- Procedure: rect-clamp rect1 rect2
+     Return a new rect that adjusts the location of RECT1 so that it is
+     completely within RECT2.  An exception is thrown in the case that
+     RECT1 cannot fit completely within RECT2.
+
+ -- Procedure: rect-move rect x y
+     Return a new rectangle based on RECT but moved to the coordinates
+     (X, Y).
+
+ -- Procedure: rect-move-vec2 rect v
+     Return a new rectangle based on RECT but moved to the coordinates
+     in the 2D vector V.
+
+ -- Procedure: rect-move-by rect x y
+     Return a new rectangle based on RECT but moved by (X, Y) units
+     relative to its current location.
+
+ -- Procedure: rect-move-by-vec2 rect v
+     Return a new rectangle based on RECT but moved by the 2D vector V
+     relative to its current location.
+
+ -- Procedure: rect-inflate rect width height
+     Return a new rectangle based on RECT, but expanded by WIDTH units
+     on the X axis and HEIGHT units on the Y axis, while keeping the
+     rectangle centered on the same point.
+
+ -- Procedure: rect-union rect1 rect2
+     Return a new rectangle that completely covers the area of RECT1 and
+     RECT2.
+
+ -- Procedure: rect-clip rect1 rect2
+     Return a new rectangle that is the overlapping region of RECT1 and
+     RECT2.  If the two rectangles do not overlap, a rectangle of 0
+     width and 0 height is returned.
+
+ -- Procedure: set-rect-x! rect x
+     Set the left X coordinate of RECT to X.
+
+ -- Procedure: set-rect-y! rect y
+     Set the bottom Y coordinate of RECT to Y.
+
+ -- Procedure: set-rect-width! rect width
+     Set the width of RECT to WIDTH.
+
+ -- Procedure: set-rect-height! rect height
+     Set the height of RECT to HEIGHT.
+
+ -- Procedure: rect-move! rect x y
+     Move RECT to (X, Y) in-place.
+
+ -- Procedure: rect-move-vec2! rect v
+     Move RECT to the 2D vector V in-place.
+
+ -- Procedure: rect-move-by! rect x y
+     Move RECT by (X, Y) in-place.
+
+ -- Procedure: rect-move-by-vec2! rect v
+     Move RECT by the 2D vector V in-place.
+
+ -- Procedure: rect-inflate! rect width height
+     Expand RECT by WIDTH and HEIGHT in-place.
+
+ -- Procedure: rect-union! rect1 rect2
+     Modify RECT1 in-place to completely cover the area of both RECT1
+     and RECT2.
+
+ -- Procedure: rect-clip! rect1 rect2
+     Modify RECT1 in-place to be the overlapping region of RECT1 and
+     RECT2.
+
+ -- Procedure: rect-clamp! rect1 rect2
+     Adjust the location of RECT1 in-place so that its bounds are
+     completely within RECT2.  An exception is thrown in the case that
+     RECT1 cannot fit completely within RECT2.
+
+ -- Procedure: vec2-clamp-to-rect! v rect
+     Restrict the coordinates of the 2D vector V so that they are within
+     the bounds of RECT.  V is modified in-place.
+
+
+File: chickadee.info,  Node: Grid,  Next: Matrices,  Prev: Rectangles,  Up: Math
+
+2.2.4 Grid
+----------
+
+The '(chickadee math grid)' module provides a simple spatial
+partitioning system for axis-aligned bounding boxes (*note Rectangles::)
+in 2D space.  The grid divides the world into tiles and keeps track of
+which rectangles occupy which tiles.  When there are lots of moving
+objects in the game world that need collision detection, the grid
+greatly speeds up the process.  Instead of checking collisions of each
+object against every other object (an O(n^2) operation), the grid
+quickly narrows down which objects could possibly be colliding and only
+performs collision testing against a small set of objects.
+
+   In addition to checking for collisions, the grid also handles the
+resolution of collisions.  Exactly how each collision is resolved is
+user-defined.  A player bumping into a wall may slide against it.  An
+enemy colliding with a projectile shot by the player may get pushed back
+in the opposite direction.  Two players colliding may not need
+resolution at all and will just pass through each other.  The way this
+works is that each time an object (A) is moved within the grid, the grid
+looks for an object (B) that may possibly be colliding with A. A
+user-defined procedure known as a "filter" is then called with both A
+and B. If the filter returns '#f', it means that even if A and B are
+colliding, no collision resolution is needed.  In this case the grid
+won't waste time checking if they really do collide because it doesn't
+matter.  If A and B are collidable, then the filter returns a procedure
+that implements the resolution technique.  The grid will then perform a
+collision test.  If A and B are colliding, the resolver procedure is
+called.  It's the resolvers job to adjust the objects such that they are
+no longer colliding.  The grid module comes with a very simple
+resolution procedure, 'slide', that adjusts object A by the smallest
+amount so that it no longer overlaps with B. By using this filtering
+technique, a game can resolve collisions between different objects in
+different ways.
+
+ -- Procedure: make-grid [cell-size 64]
+     Return a new grid partitioned into CELL-SIZE tiles.
+
+ -- Procedure: grid? obj
+     Return '#t' if OBJ is a grid.
+
+ -- Procedure: cell? obj
+     Return '#t' if OBJ is a grid cell.
+
+ -- Procedure: cell-count cell
+     Return the number of items in CELL.
+
+ -- Procedure: grid-cell-size grid
+     Return the cell size of GRID.
+
+ -- Procedure: grid-cell-count grid
+     Return the number of cells currently in GRID.
+
+ -- Procedure: grid-item-count grid
+     Return the number of items in GRID.
+
+ -- Procedure: grid-add grid item x y width height
+
+     Add ITEM to GRID represented by the axis-aligned bounding box whose
+     lower-left corner is at (X, Y) and is WIDTH x HEIGHT in size.
+
+ -- Procedure: grid-remove grid item
+     Return ITEM from GRID.
+
+ -- Procedure: grid-clear grid
+     Remove all items from GRID.
+
+ -- Procedure: grid-move grid item position filter
+     Attempt to move ITEM in GRID to POSITION (a 2D vector) and check
+     for collisions.  For each collision, FILTER will be called with two
+     arguments: ITEM and the item it collided with.  If a collision
+     occurs, POSITION may be modified to resolve the colliding objects.
+
+ -- Procedure: for-each-cell proc grid [rect]
+     Call PROC with each cell in GRID that intersects RECT, or every
+     cell if RECT is '#f'.
+
+ -- Procedure: for-each-item proc grid
+     Call PROC for each item in GRID.
+
+ -- Procedure: slide item item-rect other other-rect goal
+
+     Resolve the collision that occurs between ITEM and OTHER when
+     moving ITEM-RECT to GOAL by sliding ITEM-RECT the minimum amount
+     needed to make it no longer overlap OTHER-RECT.
+
+
+File: chickadee.info,  Node: Matrices,  Next: Quaternions,  Prev: Grid,  Up: Math
+
+2.2.5 Matrices
+--------------
+
+The '(chickadee math matrix)' module provides an interface for working
+with the most common type of matrices in game development: 4x4
+transformation matrices.
+
+2.2.5.1 Another Note About Performance
+......................................
+
+Much like the vector API, the matrix API is commonly used in performance
+critical code paths.  In order to reduce the amount of garbage generated
+and improve matrix multiplication performance, there are many procedures
+that perform in-place modifications of matrix objects.
+
+2.2.5.2 Matrix Operations
+.........................
+
+ -- Procedure: make-matrix4 aa ab ac ad ba bb bc bd ca cb cc cd da db dc
+          dd
+
+     Return a new 4x4 matrix initialized with the given 16 values in
+     column-major format.
+
+ -- Procedure: make-null-matrix4
+     Return a new 4x4 matrix with all values initialized to 0.
+
+ -- Procedure: make-identity-matrix4
+     Return a new 4x4 identity matrix.  Any matrix multiplied by the
+     identity matrix yields the original matrix.  This procedure is
+     equivalent to the following code:
+
+          (make-matrix4 1 0 0 0
+                        0 1 0 0
+                        0 0 1 0
+                        0 0 0 1)
+
+ -- Procedure: matrix4? obj
+     Return '#t' if OBJ is a 4x4 matrix.
+
+ -- Procedure: matrix4* . matrices
+     Return a new 4x4 matrix containing the product of multiplying all
+     of the given MATRICES.
+
+     Note: Remember that matrix multiplication is *not* commutative!
+
+ -- Procedure: orthographic-projection left right top bottom near far
+
+     Return a new 4x4 matrix that represents an orthographic (2D)
+     projection for the horizontal clipping plane TOP and BOTTOM, the
+     vertical clipping plane TOP and BOTTOM, and the depth clipping
+     plane NEAR and FAR.
+
+ -- Procedure: perspective-projection fov aspect-ratio near far
+
+     Return a new 4x4 matrix that represents a perspective (3D)
+     projection with a field of vision of FOV radians, an aspect ratio
+     of ASPECT-RATIO, and a depth clipping plane defined by NEAR and
+     FAR.
+
+ -- Procedure: matrix4-translate x
+     Return a new 4x4 matrix that represents a translation by X, a 2D
+     vector, a 3D vector, or a rectangle (in which case the bottom-left
+     corner of the rectangle is used).
+
+ -- Procedure: matrix4-scale s
+     Return a new 4x4 matrix that represents a scaling along the X, Y,
+     and Z axes by the scaling factor S, a real number.
+
+ -- Procedure: matrix4-rotate q
+     Return a new 4x4 matrix that represents a rotation about an
+     arbitrary axis defined by the quaternion Q.
+
+ -- Procedure: matrix4-rotate-z theta
+     Return a new 4x4 matrix that represents a rotation about the Z axis
+     by THETA radians.
+
+ -- Procedure: matrix4-identity! matrix
+     Modify MATRIX in-place to contain the identity matrix.
+
+ -- Procedure: matrix4-mult! dest a b
+     Multiply the 4x4 matrix A by the 4x4 matrix B and store the result
+     in the 4x4 matrix DEST.
+
+ -- Procedure: matrix4-translate! matrix x
+     Modify MATRIX in-place to contain a translation by X, a 2D vector,
+     a 3D vector, or a rectangle (in which case the bottom-left corner
+     of the rectangle is used).
+
+ -- Procedure: matrix4-scale! matrix s
+     Modify MATRIX in-place to contain a scaling along the X, Y, and Z
+     axes by the scaling factor S, a real number.
+
+ -- Procedure: matrix4-rotate! matrix q
+     Modify MATRIX in-place to contain a rotation about an arbitrary
+     axis defined by the quaternion Q.
+
+ -- Procedure: matrix4-rotate-z! matrix theta
+     Modify MATRIX in-place to contain a rotation about the Z axis by
+     THETA radians.
+
+ -- Procedure: matrix4-2d-transform! matrix [#:origin] [#:position]
+          [#:rotation] [#:scale] [#:skew]
+
+     Modify MATRIX in-place to contain the transformation described by
+     POSITION, a 2D vector or rectangle, ROTATION, a scalar representing
+     a rotation about the Z axis, SCALE, a 2D vector, and SKEW, a 2D
+     vector.  The transformation happens with respect to ORIGIN, a 2D
+     vector.  If an argument is not provided, that particular
+     transformation will not be included in the result.
+
+ -- Procedure: transform! matrix v
+     Modify the 2D vector V in-place by multiplying it by the 4x4 matrix
+     MATRIX.
+
+
+File: chickadee.info,  Node: Quaternions,  Next: Easings,  Prev: Matrices,  Up: Math
+
+2.2.6 Quaternions
+-----------------
+
+In game development, the quaternion is most often used to represent
+rotations.  Why not use a matrix for that, you may ask.  Unlike
+matrices, quaternions can be interpolated (animated) and produce a
+meaningful result.  When interpolating two quaternions, there is a
+smooth transition from one rotation to another, whereas interpolating
+two matrices would yield garbage.
+
+ -- Procedure: quaternion x y z w
+     Return a new quaternion with values X, Y, Z, and W.
+
+ -- Procedure: quaternion? obj
+     Return '#t' if OBJ is a quaternion.
+
+ -- Procedure: quaternion-w q
+     Return the W component of the quaternion Q.
+
+ -- Procedure: quaternion-x q
+     Return the X component of the quaternion Q.
+
+ -- Procedure: quaternion-y q
+     Return the Y component of the quaternion Q.
+
+ -- Procedure: quaternion-z q
+     Return the Z component of the quaternion Q.
+
+ -- Procedure: make-identity-quaternion
+     Return the identity quaternion.
+
+
+File: chickadee.info,  Node: Easings,  Next: Bezier Curves,  Prev: Quaternions,  Up: Math
+
+2.2.7 Easings
+-------------
+
+Easing functions are essential for animation.  Each easing function
+provides a different path to go from an initial value to a final value.
+These functions make an excellent companion to the 'tween' procedure
+(*note Tweening::).  Experiment with them to figure out which function
+makes an animation look the best.
+
+   Pro tip: 'smoothstep' provides nice results most of the time and
+creates smoother animation than using 'linear'.
+
+ -- Procedure: linear t
+
+ -- Procedure: smoothstep t
+
+ -- Procedure: ease-in-quad t
+
+ -- Procedure: ease-out-quad t
+
+ -- Procedure: ease-in-out-quad t
+
+ -- Procedure: ease-in-cubic t
+
+ -- Procedure: ease-out-cubic t
+
+ -- Procedure: ease-in-out-cubic t
+
+ -- Procedure: ease-in-quart t
+
+ -- Procedure: ease-out-quart t
+
+ -- Procedure: ease-in-out-quart t
+
+ -- Procedure: ease-in-quint t
+
+ -- Procedure: ease-out-quint t
+
+ -- Procedure: ease-in-out-quint t
+
+ -- Procedure: ease-in-sine t
+
+ -- Procedure: ease-out-sine t
+
+ -- Procedure: ease-in-out-sine t
+
+
+File: chickadee.info,  Node: Bezier Curves,  Next: Path Finding,  Prev: Easings,  Up: Math
+
+2.2.8 Bezier Curves
+-------------------
+
+The '(chickadee math bezier)' module provides an API for describing
+cubic Bezier curves in 2D space.  These curves are notably used in font
+description, vector graphics programs, and when it comes to games: path
+building.  With Bezier curves, it's somewhat easy to create a smooth
+looking path for an enemy to move along, for example.  Bezier curves
+become particularly interesting when they are chained together to form a
+Bezier "path", where the end point of one curve becomes the starting
+point of the next.
+
+   Currently, the rendering of Bezier curves is rather crude and
+provided mostly for visualizing and debugging curves that would be
+unseen in the final game.  See *Note Lines and Shapes:: for more
+information.
+
+ -- Procedure: make-bezier-curve p0 p1 p2 p3
+     Return a new Bezier curve object whose starting point is P0, ending
+     point is P3, and control points are P1 and P2.  All points are 2D
+     vectors.
+
+ -- Procedure: bezier-curve? obj
+     Return '#t' if OBJ is a Bezier curve.
+
+ -- Procedure: bezier-curve-p0 bezier
+     Return the starting point of BEZIER.
+
+ -- Procedure: bezier-curve-p1 bezier
+     Return the first control point of BEZIER.
+
+ -- Procedure: bezier-curve-p2 bezier
+     Return the second control point of BEZIER.
+
+ -- Procedure: bezier-curve-p3 bezier
+     Return the end point of BEZIER.
+
+ -- Procedure: bezier-path . control-points
+     Return a list of connected bezier curves defined by CONTROL-POINTS.
+     The first curve is defined by the first 4 arguments and every
+     additional curve thereafter requires 3 additional arguments.
+
+ -- Procedure: bezier-curve-point-at bezier t
+     Return the coordinates for BEZIER at T (a value in the range [0, 1]
+     representing how far from the start of the curve to check) as a 2D
+     vector.
+
+ -- Procedure: bezier-curve-point-at! dest bezier t
+     Modify the 2D vector DEST in-place to contain the coordinates for
+     BEZIER at T.
+
+
+File: chickadee.info,  Node: Path Finding,  Prev: Bezier Curves,  Up: Math
+
+2.2.9 Path Finding
+------------------
+
+Most game worlds have maps.  Often, these games have a need to move
+non-player characters around in an unscripted fashion.  For example, in
+a real-time strategy game, the player may command one of their units to
+attack something in the enemy base.  To do so, the unit must calculate
+the shortest route to get there.  It wouldn't be a very fun game if
+units didn't know how to transport themselves efficiently.  This is
+where path finding algorithms come in handy.  The '(chickadee math
+path-finding)' module provides a generic implementation of the popular
+A* path finding algorithm.  Just add a map implementation!
+
+   The example below defines a very simple town map and finds the
+quickest way to get from the town common to the school.
+
+     (define world-map
+       '((town-common . (town-hall library))
+         (town-hall . (town-common school))
+         (library . (town-common cafe))
+         (school . (town-hall cafe))
+         (cafe . (library school))))
+     (define (neighbors building)
+       (assq-ref town-map building))
+     (define (cost a b) 1)
+     (define (distance a b) 1)
+     (define pf (make-path-finder))
+     (a* pf 'town-common 'school neighbors cost distance)
+
+   In this case, the 'a*' procedure will return the list '(town-common
+town-hall school)', which is indeed the shortest route.  (The other
+possible route is '(town-common library cafe school)'.)
+
+   The 'a*' procedure does not know anything about about any kind of map
+and therefore must be told how to look up neighboring nodes, which is
+what the 'neighbors' procedure in the example does.  To simulate
+different types of terrain, a cost procedure is used.  In this example,
+it is just as easy to move between any two nodes because 'cost' always
+returns 1.  In a real game, perhaps moving from from a field to a rocky
+hill would cost a lot more than moving from one field to another.
+Finally, a heuristic is used to calculate an approximate distance
+between two nodes on the map.  In this simple association list based
+graph it is tough to calculate a distance between nodes, so the
+'distance' procedure isn't helpful and always returns 1.  In a real game
+with a tile-based map, for example, the heuristic could be a quick
+Manhattan distance calculation based on the coordinates of the two map
+tiles.  Choose an appropriate heuristic for optimal path finding!
+
+ -- Procedure: make-path-finder
+     Return a new path finder object.
+
+ -- Procedure: path-finder? obj
+     Return '#t' if OBJ is a path finder.
+
+ -- Procedure: a* path-finder start goal neighbors cost distance
+
+     Return a list of nodes forming a path from START to GOAL using
+     PATH-FINDER to hold state.  NEIGHBORS is a procedure that accepts a
+     node and returns a list of nodes that neighbor it.  COST is a
+     procedure that accepts two neighboring nodes and returns the cost
+     of moving from the first to the second as a real number.  DISTANCE
+     is a procedure that accepts two nodes and returns an approximate
+     distance between them.
+
+
+File: chickadee.info,  Node: Graphics,  Next: Scripting,  Prev: Math,  Up: API Reference
+
+2.3 Graphics
+============
+
+Chickadee aims to make hardware-accelerated graphics rendering as simple
+and efficient as possible by providing high-level APIs that interact
+with the low-level OpenGL API under the hood.  Anyone that has worked
+with OpenGL directly knows that it has a steep learning curve and a lot
+of effort is needed to render even a single triangle.  The Chickadee
+rendering engine attempts to make it easy to do common tasks like
+rendering a sprite while also providing all of the building blocks to
+implement additional rendering techniques.
+
+* Menu:
+
+* Textures::                    2D images.
+* Sprites::                     Draw 2D images.
+* Tile Maps::                   Draw 2D tile maps.
+* Lines and Shapes::            Draw line segments and polygons.
+* Fonts::                       Drawing text.
+* Particles::                   Pretty little flying pieces!
+* Blending::                    Control how pixels are combined.
+* Framebuffers::                Render to texture.
+* Viewports::                   Restrict rendering to a particular area.
+* Rendering Engine::            Rendering state management.
+* Buffers::                     Send data to the GPU.
+* Shaders::                     Create custom GPU programs.
+
+
+File: chickadee.info,  Node: Textures,  Next: Sprites,  Up: Graphics
+
+2.3.1 Textures
+--------------
+
+ -- Procedure: load-image file [#:min-filter nearest] [#:mag-filter
+          nearest] [#:wrap-s repeat] [#:wrap-t repeat]
+
+     Load the image data from FILE and return a new texture object.
+
+     MIN-FILTER and MAG-FILTER describe the method that should be used
+     for minification and magnification when rendering, respectively.
+     Possible values are 'nearest' and 'linear'.
+
+     WRAP-S and WRAP-T describe how to interpret texture coordinates
+     that are greater than '1.0'.  Possible values are 'repeat',
+     'clamp', 'clamp-to-border', and 'clamp-to-edge'.
+
+ -- Procedure: texture? obj
+     Return '#t' if OBJ is a texture.
+
+ -- Procedure: texture-region? obj
+     Return '#t' if OBJ is a texture region.
+
+ -- Procedure: texture-parent texture
+     If TEXTURE is a texture region, return the full texture that it is
+     based upon.  Otherwise, return '#f'.
+
+ -- Procedure: texture-min-filter texture
+     Return the minification filter for TEXTURE, either 'nearest' or
+     'linear'.
+
+ -- Procedure: texture-mag-filter texture
+     Return the magnification filter for TEXTURE, either 'nearest' or
+     'linear'.
+
+ -- Procedure: texture-wrap-s texture
+     Return the method used for wrapping texture coordinates along the X
+     axis for TEXTURE.
+
+     Possible wrapping methods:
+        * 'repeat'
+        * 'clamp'
+        * 'clamp-to-border'
+        * 'clamp-to-edge'
+
+ -- Procedure: texture-wrap-t texture
+     Return the method used for wrapping texture coordinates along the Y
+     axis for TEXTURE.
+
+ -- Procedure: texture-width texture
+     Return the width of TEXTURE in pixels.
+
+ -- Procedure: texture-height texture
+     Return the height of TEXTURE in pixels.
+
+   It is common practice to combine multiple bitmap images into a single
+texture, known as a "tile atlas" or "tile set", because it is more
+efficient to render many regions of a large texture than it is to render
+a bunch of small textures.  Chickadee provides a tile atlas data type
+for collecting texture regions into a single vector.
+
+ -- Procedure: split-texture texture tile-width tile-height [#:margin 0]
+          [#:spacing 0]
+
+     Return a new texture atlas that splits TEXTURE into a grid of
+     TILE-WIDTH by TILE-HEIGHT rectangles.  Optionally, each tile may
+     have SPACING pixels of horizontal and vertical space between
+     surrounding tiles and the entire image may have MARGIN pixels of
+     empty space around its border.
+
+     This type of texture atlas layout is very common for 2D tile maps.
+     *Note Tile Maps:: for more information.
+
+ -- Procedure: texture-atlas? obj
+     Return '#t' if OBJ is a texture atlas.
+
+ -- Procedure: texture-atlas-texture atlas
+     Return the texture that all texture regions in ATLAS have been
+     created from.
+
+ -- Procedure: texture-atlas-ref atlas index
+     Return the texture region in ATLAS at INDEX.
+
+
+File: chickadee.info,  Node: Sprites,  Next: Tile Maps,  Prev: Textures,  Up: Graphics
+
+2.3.2 Sprites
+-------------
+
+For those who are new to this game, a sprite is a 2D rectangular bitmap
+that is rendered to the screen.  For 2D games, sprites are the most
+essential graphical abstraction.  They are used for drawing maps,
+players, NPCs, items, particles, text, etc.  In Chickadee, bitmaps are
+stored in textures (*note Textures::) and can be used to draw sprites
+via the 'draw-sprite' procedure.
+
+ -- Procedure: draw-sprite texture position [#:tint white] [#:origin]
+          [#:scale] [#:rotation] [#:blend-mode alpha] [#:rect]
+
+     Draw TEXTURE at POSITION.
+
+     Optionally, other transformations may be applied to the sprite.
+     ROTATION specifies the angle to rotate the sprite, in radians.
+     SCALE specifies the scaling factor as a 2D vector.  All
+     transformations are applied relative to ORIGIN, a 2D vector, which
+     defaults to the lower-left corner.
+
+     TINT specifies the color to multiply against all the sprite's
+     pixels.  By default white is used, which does no tinting at all.
+
+     Alpha blending is used by default but the blending method can be
+     changed by specifying BLEND-MODE.
+
+     The area drawn to is as big as the texture, by default.  To draw to
+     an arbitrary section of the screen, specify RECT.
+
+   It's not uncommon to need to draw hundreds or thousands of sprites
+each frame.  However, GPUs (graphics processing units) are tricky beasts
+that prefer to be sent few, large chunks of data to render rather than
+many, small chunks.  Using 'draw-sprite' on its own will involve at
+least one GPU call _per sprite_.  This is fine for rendering a few dozen
+sprites, but will become a serious bottleneck when rendering hundreds or
+thousands of sprites.  To deal with this, a technique known as "sprite
+batching" is used.  Instead of drawing each sprite immediately, the
+sprite batch will build up a large of buffer of sprites to draw and send
+them to the GPU all at once.  There is one caveat, however.  Batching
+only works if the sprites being drawn share a common texture.  A good
+strategy for reducing the number of different textures is to stuff many
+bitmaps into a single image file and create a "texture atlas" (*note
+Textures::) to access the sub-images within.
+
+ -- Procedure: make-sprite-batch texture [#:capacity 256]
+     Create a new sprite batch for TEXTURE with initial space for
+     CAPACITY sprites.  Sprite batches automatically resize when they
+     are full to accomodate as many sprites as necessary.
+
+ -- Procedure: sprite-batch? obj
+     Return '#t' if OBJ is a sprite batch.
+
+ -- Procedure: sprite-batch-texture batch
+     Return the texture for BATCH.
+
+ -- Procedure: set-sprite-batch-texture! batch texture
+     Set texture for BATCH to TEXTURE.
+
+ -- Procedure: sprite-batch-add! batch position [#:origin] [#:scale]
+          [:rotation] [#:tint 'white'] [#:texture-region]
+
+     Add sprite located at POSITION to BATCH.
+
+     To render a subsection of the batch's texture, a texture object
+     whose parent is the batch texture may be specified as
+     TEXTURE-REGION.
+
+     See 'draw-sprite' for information about the other arguments.
+
+ -- Procedure: sprite-batch-clear! batch
+     Reset size of BATCH to 0.
+
+ -- Procedure: draw-sprite-batch batch [#:blend-mode 'alpha']
+     Render BATCH using BLEND-MODE.  Alpha blending is used by default.
+
+   With a basic sprite abstraction in place, it's possible to build
+other abstractions on top of it.  One such example is the "nine patch".
+A nine patch is a sprite that can be rendered at various sizes without
+becoming distorted.  This is achieved by dividing up the sprite into
+nine regions:
+
+   * the center, which can be scaled horizontally and vertically
+   * the four corners, which can never be scaled
+   * the left and right sides, which can be scaled vertically
+   * the top and bottom sides, which can be scaled horizontally
+
+   The one caveat is that the bitmap regions must be designed in such a
+way so that they are not distorted when stretched along the affected
+axes.  For example, that means that the top and bottom sides could have
+varying colored pixels vertically, but not horizontally.
+
+   The most common application of this technique is for graphical user
+interface widgets like buttons and dialog boxes.  By using a nine patch,
+they can be rendered at any size without unappealing scaling artifacts.
+
+ -- Procedure: draw-nine-patch texture rect [#:margin 0] [#:top-margin
+          margin] [#:bottom-margin margin] [#:left-margin margin]
+          [#:right-margin margin] [#:origin] [#:scale] [#:rotation]
+          [#:blend-mode alpha] [#:tint white]
+
+     Draw a nine patch sprite.  A nine patch sprite renders TEXTURE as a
+     WIDTH x HEIGHT rectangle whose stretchable areas are defined by the
+     given margin measurements TOP-MARGIN, BOTTOM-MARGIN, LEFT-MARGIN,
+     and RIGHT-MARGIN.  The MARGIN argument may be used to configure all
+     four margins at once.
+
+     Refer to 'draw-sprite' (*note Sprites::) for information about the
+     other arguments.
+
+
+File: chickadee.info,  Node: Tile Maps,  Next: Lines and Shapes,  Prev: Sprites,  Up: Graphics
+
+2.3.3 Tile Maps
+---------------
+
+A tile map is a scene created by composing lots of small sprites, called
+"tiles", into a larger image.  One program for editing such maps is
+called Tiled (http://mapeditor.org).  Chickadee has native support for
+loading and rendering Tiled maps in the '(chickadee render tiled)'
+module.
+
+ -- Procedure: load-tile-map file-name
+     Load the Tiled formatted map in FILE-NAME and return a new tile map
+     object.
+
+ -- Procedure: tile-map? obj
+     Return '#t' if OBJ is a tile map.
+
+ -- Procedure: tile-map-orientation tile-map
+     Return the orientation of TILE-MAP.
+
+ -- Procedure: tile-map-width tile-map
+     Return the width of TILE-MAP in tiles.
+
+ -- Procedure: tile-map-height tile-map
+     Return the height of TILE-MAP in tiles.
+
+ -- Procedure: tile-map-tile-width tile-map
+     Return the width of tiles in TILE-MAP.
+
+ -- Procedure: tile-map-tile-height tile-map
+     Return the height of tiles in TILE-MAP.
+
+ -- Procedure: tile-map-tilesets tile-map
+     Return the tilesets for TILE-MAP.
+
+ -- Procedure: tile-map-layers tile-map
+     Return the layers of TILE-MAP.
+
+ -- Procedure: tile-map-properties tile-map
+     Return the custom properties of TILE-MAP.
+
+ -- Procedure: point->tile tile-map x y
+     Translate the pixel coordinates (X, Y) into tile coordinates.
+
+ -- Procedure: draw-tile-map tile-map [#:layers] [#:region] [#:origin]
+          [#:position] [#:scale] [#:rotation]
+
+     Draw the layers of TILE-MAP.  By default, all layers are drawn.  To
+     draw a subset of the available layers, pass a list of layer ids
+     using the LAYERS keyword argument.
+
+     Refer to 'draw-sprite' (*note Sprites::) for information about the
+     other arguments.
+
+2.3.3.1 Tilesets
+................
+
+ -- Procedure: tileset? obj
+     Return '#t' if OBJ is a tileset.
+
+ -- Procedure: tileset-name tileset
+     Return the name of TILESET.
+
+ -- Procedure: tileset-first-gid tileset
+     Return the starting GID of TILESET.
+
+ -- Procedure: tileset-size tileset
+     Return the number of tiles in TILESET.
+
+ -- Procedure: tileset-tile-width tileset
+     Return the width of tiles in TILESET.
+
+ -- Procedure: tileset-tile-height tileset
+     Return the height of tiles in TILESET.
+
+ -- Procedure: tileset-atlas tileset
+     Return the texture atlas for TILESET.
+
+ -- Procedure: tileset-tiles tileset
+     Return the tiles in TILESET.
+
+ -- Procedure: tileset-properties tileset
+     Return the custom properties of TILESET.
+
+2.3.3.2 Tiles
+.............
+
+ -- Procedure: tile? obj
+     Return '#t' if OBJ is a tile.
+
+ -- Procedure: tile-id tile
+     Return the ID of TILE.
+
+ -- Procedure: tile-animation tile
+     Return the animation for TILE.
+
+ -- Procedure: tile-properties tile
+     Return the custom properties of TILE.
+
+2.3.3.3 Animations
+..................
+
+ -- Procedure: animation-frame? obj
+     Return '#t' if OBJ is an animation frame.
+
+ -- Procedure: animation-frame-tile frame
+     Return the tile for FRAME.
+
+ -- Procedure: animation-frame-duration frame
+     Return the duration of FRAME.
+
+2.3.3.4 Layers
+..............
+
+ -- Procedure: tile-layer? obj
+     Return '#t' if OBJ is a tile layer.
+
+ -- Procedure: tile-layer-name layer
+     Return the name of LAYER.
+
+ -- Procedure: tile-layer-width layer
+     Return the width in tiles of LAYER.
+
+ -- Procedure: tile-layer-height layer
+     Return the height in tiles of LAYER.
+
+ -- Procedure: tile-layer-tiles layer
+     Return the tile data for LAYER.
+
+ -- Procedure: tile-layer-properties layer
+     Return the custom properties of LAYER.
+
+ -- Procedure: object-layer? obj
+     Return '#t' if OBJ is an object layer.
+
+ -- Procedure: object-layer-name layer
+     Return the name of LAYER.
+
+ -- Procedure: object-layer-objects layer
+     Return the objects for LAYER.
+
+ -- Procedure: object-layer-properties layer
+     Return the custom properties of LAYER.
+
+2.3.3.5 Objects
+...............
+
+ -- Procedure: map-object? obj
+     Return '#t' if OBJ is a map object.
+
+ -- Procedure: map-object-id obj
+     Return the ID of OBJ.
+
+ -- Procedure: map-object-name obj
+     Return the name of OBJ.
+
+ -- Procedure: map-object-type obj
+     Return the type of OBJ.
+
+ -- Procedure: map-object-shape obj
+     Return the shape of OBJ.
+
+ -- Procedure: map-object-properties obj
+     Return the custom properties of OBJ.
+
+2.3.3.6 Polygons
+................
+
+ -- Procedure: polygon? obj
+     Return '#t' if OBJ is a polygon.
+
+ -- Procedure: polygon-points polygon
+     Return the list of points that form POLYGON.
+
+
+File: chickadee.info,  Node: Lines and Shapes,  Next: Fonts,  Prev: Tile Maps,  Up: Graphics
+
+2.3.4 Lines and Shapes
+----------------------
+
+Sprites are fun, but sometimes simple, untextured lines and polygons are
+desired.  That's where the '(chickadee render shapes)' module comes in!
+
+ -- Procedure: draw-line start end [#:thickness 0.5] [#:feather 1.0]
+          [#:cap round] [#:color] [#:shader]
+
+     Draw a line segment from START to END.  The line will be THICKNESS
+     pixels thick with an antialiased border FEATHER pixels wide.  The
+     line will be colored COLOR.  CAP specifies the type of end cap that
+     should be used to terminate the lines, either 'none', 'butt',
+     'square', 'round', 'triangle-in', or 'triangle-out'.  Advanced
+     users may use the SHADER argument to override the built-in line
+     segment shader.
+
+ -- Procedure: draw-bezier-curve bezier [#:segments 32]
+          [#:control-points?] [#:tangents?] [#:control-point-size 8]
+          [#:control-point-color yellow] [#:tangent-color yellow]
+          [#:thickness 0.5] [#:feather 1.0] [#:matrix]
+
+     Draw the curve defined by BEZIER using a resolution of N SEGMENTS.
+     When CONTROL-POINTS? is '#t', the control points are rendered as
+     squares of size CONTROL-POINT-SIZE pixels and a color of
+     CONTROL-POINT-COLOR.  When TANGENTS? is '#t', the tangent lines
+     from terminal point to control point are rendered using the color
+     TANGENT-COLOR.
+
+     All line segments rendered use 'draw-line', and thus the arguments
+     THICKNESS and FEATHER have the same effect as in that procedure.
+
+     A custom MATRIX may be passed for applications that require more
+     control over the final output.
+
+ -- Procedure: draw-bezier-path path [#:segments 32] [#:control-points?]
+          [#:tangents?] [#:control-point-size 8] [#:control-point-color
+          yellow] [#:tangent-color yellow] [#:thickness 0.5] [#:feather
+          1.0] [#:matrix]
+
+     Render PATH, a list of bezier curves.  See the documentation for
+     'draw-bezier-curve' for an explanation of all the keyword
+     arguments.
+
+
+File: chickadee.info,  Node: Fonts,  Next: Particles,  Prev: Lines and Shapes,  Up: Graphics
+
+2.3.5 Fonts
+-----------
+
+Printing text to the screen is quite easy:
+
+     (draw-text "Hello, world" (vec2 100.0 100.0))
+
+   Chickadee loads and renders bitmap fonts in the Angel Code format
+(http://www.angelcode.com/products/bmfont/doc/file_format.html).  A
+default font named "Good Neighbors" is built-in to Chickadee and is used
+for all text rendering operations where a font is not specified, as is
+the case in the above example.
+
+   The following procedures can be found in the '(chickadee render
+font)' module:
+
+ -- Procedure: load-font file
+     Load the Angel Code font (in either XML or FNT format) in FILE and
+     return a new font object.
+
+ -- Procedure: font? obj
+     Return '#t' if OBJ is a font object.
+
+ -- Procedure: font-face font
+     Return the name of FONT.
+
+ -- Procedure: font-line-height font
+     Return the line height of FONT.
+
+ -- Procedure: font-line-height font
+     Return the line height of FONT.
+
+ -- Procedure: font-bold? font
+     Return '#t' if FONT is a bold font.
+
+ -- Procedure: font-italic? font
+     Return '#t' if FONT is an italicized font.
+
+ -- Procedure: draw-text text position
+     [#:font] [#:origin] [#:scale] [#:rotation] [#:blend-mode] [#:start
+     0] [#:end '(string-length text)']
+
+     Draw the string TEXT with the first character starting at POSITION
+     using FONT.  If FONT is not specified, a built-in font is used.
+
+          (draw-text font "Hello, world!" (vec2 128.0 128.0))
+
+     To render a substring of TEXT, use the START and END arguments.
+
+     Refer to 'draw-sprite' (*note Sprites::) for information about the
+     other arguments.
+
+
+File: chickadee.info,  Node: Particles,  Next: Blending,  Prev: Fonts,  Up: Graphics
+
+2.3.6 Particles
+---------------
+
+Effects like smoke, fire, sparks, etc.  are often achieved by animating
+lots of little, short-lived sprites known as "particles".  In fact, all
+of these effects, and more, can be accomplished by turning a few
+configuration knobs in a "particle system".  A particle system takes
+care of managing the many miniscule moving morsels so the developer can
+quickly produce an effect and move on with their life.  The '(chickadee
+render particles)' module provides an API for manipulating particle
+systems.
+
+   Below is an example of a very simple particle system that utilizes
+nearly all of the default configuration settings:
+
+     (use-modules (chickadee render particles))
+     (define texture (load-image "particle.png"))
+     (define particles (make-particles 2000 #:texture texture))
+
+   In order to put particles into a particle system, a particle
+"emitter" is needed.  Emitters know where to spawn new particles, how
+many of them to spawn, and for how long they should do it.
+
+   Below is an example of an emitter that spawns 16 particles per frame
+at the coordinates '(320, 240)':
+
+     (use-modules (chickadee math vector))
+     (define emitter (make-particle-emitter (vec2 320.0 240.0) 16))
+     (add-particle-emitter particles emitter)
+
+   To see all of the tweakable knobs and switches, read on!
+
+ -- Procedure: make-particles capacity [#:blend-mode 'alpha'] [#:color
+          white] [#:end-color transparent] [#:texture] [#:animation-rows
+          1] [#:animation-columns 1] [#:width] [#:height] [#:speed-range
+          (vec2 0.1 1.0)] [#:acceleration-range (vec2 0.0 0.1)]
+          [#:direction-range (vec2 0 (* 2 pi))] [#:lifetime 30] [#:sort]
+
+     Return a new particle system that may contain up to CAPACITY
+     particles.  Achieving the desired particle effect involves tweaking
+     the following keyword arguments as needed:
+
+     - BLEND-MODE: Pixel blending mode.  'alpha' by default.  (*note
+     Blending:: for more about blend modes).
+
+     - START-COLOR: The tint color of the particle at the beginning of
+     its life.  White by default.
+
+     - END-COLOR: The tint color of the particle at the end of of its
+     life.  Completely transparent by default for a fade-out effect.
+     The color in the middle of a particle's life will be an
+     interpolation of START-COLOR and END-COLOR.
+
+     - TEXTURE: The texture applied to the particles.  The texture may
+     be subdivided into many animation frames.
+
+     - ANIMATION-ROWS: How many animation frame rows there are in the
+     texture.  Default is 1.
+
+     - ANIMATION-COLUMNS: How many animation frame columns there are in
+     the texture.  Default is 1.
+
+     - WIDTH: The width of each particle.  By default, the width of an
+     animation frame (in pixels) is used.
+
+     - HEIGHT: The height of each particle.  By default, the height of
+     an animation frame (in pixels) is used.
+
+     - SPEED-RANGE: A 2D vector containing the min and max particle
+     speed.  Each particle will have a speed chosen at random from this
+     range.  By default, speed ranges from 0.1 to 1.0.
+
+     - ACCELERATION-RANGE: A 2D vector containing the min and max
+     particle acceleration.  Each particle will have an acceleration
+     chosen at random from this range.  By default, acceleration ranges
+     from 0.0 to 0.1.
+
+     - DIRECTION-RANGE: A 2D vector containing the min and max particle
+     direction as an angle in radians.  Each particle will have a
+     direction chosen at random from this range.  By default, the range
+     covers all possible angles.
+
+     - LIFETIME: How long each particle lives, measured in updates.  30
+     by default.
+
+     - SORT: 'youngest' if youngest particle should be drawn last or
+     'oldest' for the reverse.  By default, no sorting is applied at
+     all.
+
+ -- Procedure: particles? obj
+     Return '#t' if OBJ is a particle system.
+
+ -- Procedure: update-particles particles
+     Advance the simulation of PARTICLES.
+
+ -- Procedure: draw-particles particles
+     Render PARTICLES.
+
+ -- Procedure: draw-particles* particles matrix
+     Render PARTICLES with MATRIX applied.
+
+ -- Procedure: make-particle-emitter spawn-area rate [duration]
+
+     Return a new particle emitter that spawns RATE particles per frame
+     within SPAWN-AREA (a rectangle or 2D vector) for DURATION frames.
+     If DURATION is not specified, the emitter will spawn particles
+     indefinitely.
+
+ -- Procedure: particle-emitter? obj
+     Return '#t' if OBJ is a particle emitter.
+
+ -- Procedure: particle-emitter-spawn-area emitter
+     Return the spawn area for EMITTER.
+
+ -- Procedure: particle-emitter-rate emitter
+     Return the number of particles that EMITTER will spawn per frame.
+
+ -- Procedure: particle-emitter-life emitter
+     Return the number of frames remaining in EMITTER's lifespan.
+
+ -- Procedure: particle-emitter-done? emitter
+     Return '#t' if EMITTER has finished spawning particlces.
+
+ -- Procedure: add-particle-emitter particles emitter
+     Add EMITTER to PARTICLES.
+
+ -- Procedure: remove-particle-emitter particles emitter
+     Remove EMITTER to PARTICLES
+
+
+File: chickadee.info,  Node: Blending,  Next: Framebuffers,  Prev: Particles,  Up: Graphics
+
+2.3.7 Blending
+--------------
+
+Rendering a scene often involves drawing layers of objects that overlap
+each other.  Blending determines how two overlapping pixels are combined
+in the final image that is rendered to the screen.  Chickadee provides
+the following blend modes:
+
+   * 'replace' Use the latest color, ignoring all others.
+
+   * 'alpha' Blend pixels according to the values of their alpha
+     channels.  This is the most commonly used blend mode and thus is
+     Chickadee's default mode.
+
+   * 'add' Add all pixel color values together.  The more colors blended
+     together, the more white the final color becomes.
+
+   * 'subtract' Subtract all pixel color values.  The more colors
+     blended together, the more black the final color becomes.
+
+   * 'multiply'
+
+   * 'darken'
+
+   * 'lighten'
+
+   * 'screen'
+
+
+File: chickadee.info,  Node: Framebuffers,  Next: Viewports,  Prev: Blending,  Up: Graphics
+
+2.3.8 Framebuffers
+------------------
+
+A framebuffer is a chunk of memory that the GPU can render things onto.
+By default, the framebuffer that is used for rendering is the one
+belonging to the game window, but custom framebuffers can be used as
+well.  A common use-case for custom framebuffers is applying
+post-processing effects: The entire scene is rendered to a framebuffer,
+and then the contents of that framebuffer are applied to a
+post-processing shader and rendered to the game window.  The
+post-processing shader could do any number of things: scaling,
+antialiasing, motion blur, etc.
+
+ -- Procedure: make-framebuffer width height [#:min-filter 'linear']
+          [#:mag-filter 'linear'] [#:wrap-s 'repeat'] [#:wrap-t
+          'repeat']
+
+     Create a new framebuffer that is WIDTH pixels wide and HEIGHT
+     pixels high.
+
+     MIN-FILTER and MAG-FILTER determine the scaling algorithm applied
+     to the framebuffer when rendering.  By default, linear scaling is
+     used in both cases.  To perform no smoothing at all, use 'nearest'
+     for simple nearest neighbor scaling.  This is typically the best
+     choice for pixel art games.
+
+ -- Procedure: framebuffer? obj
+     Return '#t' if OBJ is a framebuffer.
+
+ -- Procedure: framebuffer-texture fb
+     Return the texture backing the framebuffer FB.
+
+ -- Procedure: framebuffer-viewport fb
+     Return the default viewport (*note Viewports::) used by the
+     framebuffer FB.
+
+ -- Procedure: null-framebuffer
+     The default framebuffer.
+
+
+File: chickadee.info,  Node: Viewports,  Next: Rendering Engine,  Prev: Framebuffers,  Up: Graphics
+
+2.3.9 Viewports
+---------------
+
+A viewport represents a subset of the screen (or framebuffer).  When
+rendering a frame, the resulting image will only appear within that
+viewport.  These aren't often needed, and Chickadee's default viewport
+occupies the entire screen, but there are certain situations where they
+are useful.  For example, a split-screen multiplayer game may render to
+two different viewports, each occupying a different half of the screen.
+For information about how to set the current viewport, see
+'with-viewport' in *note Rendering Engine::.
+
+   The '(chickadee render viewport)' module provides the following API:
+
+ -- Procedure: make-viewport x y width height [#:clear-color]
+          [#:clear-flags]
+
+     Create a viewport that covers an area of the window starting from
+     coordinates (X, Y) and spanning WIDTH 'x' HEIGHT pixels.  Fill the
+     viewport with CLEAR-COLOR when clearing the screen.  Clear the
+     buffers denoted by the list of symbols in CLEAR-FLAGS.
+
+     Possible values for CLEAR-FLAGS are COLOR-BUFFER, DEPTH-BUFFER,
+     ACCUM-BUFFER, and STENCIL-BUFFER.
+
+ -- Procedure: viewport? obj
+     Return '#t' if OBJ is a viewport.
+
+ -- Procedure: viewport-x viewport
+     Return the left edge of VIEWPORT.
+
+ -- Procedure: viewport-y viewport
+     Return the bottom edge of VIEWPORT.
+
+ -- Procedure: viewport-width viewport
+     Return the width of VIEWPORT.
+
+ -- Procedure: viewport-height viewport
+     Return the height of VIEWPORT.
+
+ -- Procedure: viewport-clear-color viewport
+     Return the clear color for VIEWPORT.
+
+ -- Procedure: viewport-clear-flags viewport
+     Return the list of clear flags for VIEWPORT.
+
+
+File: chickadee.info,  Node: Rendering Engine,  Next: Buffers,  Prev: Viewports,  Up: Graphics
+
+2.3.10 Rendering Engine
+-----------------------
+
+Chickadee defines rendering using a metaphor familiar to Scheme
+programmers: procedure application.  A shader (*note Shaders::) is like
+a procedure for the GPU to apply.  Shaders are passed arguments: A
+vertex array containing the geometry to render (*note Buffers::) and
+zero or more keyword arguments that the shader understands.  Similar to
+how Scheme has 'apply' for calling procedures, Chickadee provides
+'gpu-apply' for calling shaders.
+
+   Additionally, there is some dynamic state that effects how
+'gpu-apply' will behave.  Things like the current viewport, framebuffer,
+and blend mode are stored as dynamic state because it would be tedious
+to have to have to specify them each time 'gpu-apply' is called.
+
+   The following procedures and syntax can be found in the '(chickadee
+render)' module.
+
+ -- Syntax: gpu-apply shader vertex-array [#:uniform-key uniform-value
+          ...]
+ -- Syntax: gpu-apply* shader vertex-array count [#:uniform-key
+          uniform-value ...]
+
+     Render VERTEX-ARRAY using SHADER with the uniform values specified
+     in the following keyword arguments.
+
+     While 'gpu-apply' will draw every vertex in VERTEX-ARRAY,
+     'gpu-apply*' will only draw COUNT vertices.
+
+ -- Syntax: gpu-apply/instanced shader vertex-array n [#:uniform-key
+          uniform-value ...]
+ -- Syntax: gpu-apply/instanced shader vertex-array count n
+          [#:uniform-key uniform-value ...]
+
+     Render VERTEX-ARRAY N times using SHADER with the uniform values
+     specified in the following keyword arguments.
+
+     Instanced rendering is very beneficial for rendering the same
+     object many times with only small differences for each one.  For
+     example, the particle effects described in *note Particles:: use
+     instanced rendering.
+
+     While 'gpu-apply/instanced' will draw every vertex in VERTEX-ARRAY,
+     'gpu-apply*' will only draw COUNT vertices.
+
+ -- Procedure: current-viewport
+     Return the currently bound viewport (*note Viewports::).
+
+ -- Procedure: current-framebuffer
+     Return the currently bound framebuffer (*note Framebuffers::).
+
+ -- Procedure: current-blend-mode
+     Return the currently bound blend mode (*note Blending::).
+
+ -- Procedure: current-depth-test
+     Return '#t' if depth testing is currently enabled (*note
+     Blending::).
+
+ -- Procedure: current-texture
+     Return the currently bound texture (*note Textures::).
+
+ -- Procedure: current-projection
+     Return the currently bound projection matrix (*note Matrices::).
+
+ -- Syntax: with-viewport viewport body ...
+     Evaluate BODY with the current viewport bound to VIEWPORT (*note
+     Viewports::).
+
+ -- Syntax: with-framebuffer framebuffer body ...
+     Evaluate BODY with the current framebuffer bound to FRAMEBUFFER
+     (*note Framebuffers::).
+
+ -- Syntax: with-blend-mode blend-mode body ...
+     Evaluate BODY with the current blend mode bound to BLEND-MODE
+     (*note Blending::).
+
+ -- Syntax: with-depth-test depth-test? body ...
+     Evaluate BODY with the depth-test disabled if DEPTH-TEST? is '#f',
+     or enabled otherwise (*note Blending::).
+
+ -- Syntax: with-texture texture body ...
+     Evaluate BODY with the current texture bound to TEXTURE (*note
+     Textures::).
+
+ -- Syntax: with-projection projection body ...
+     Evaluate BODY with the current projection matrix bound to
+     PROJECTION (*note Matrices::).
+
+
+File: chickadee.info,  Node: Buffers,  Next: Shaders,  Prev: Rendering Engine,  Up: Graphics
+
+2.3.11 Buffers
+--------------
+
+Alright, let's brush aside all of those pretty high level abstractions
+and discuss what is going on under the hood.  The GPU exists as a
+discrete piece of hardware separate from the CPU. In order to make it
+draw things, we must ship lots of data out of our memory space and into
+the GPU. The '(chickadee render buffer') module provides an API for
+manipulating GPU buffers.
+
+   In OpenGL terminology, a chunk of data allocated on the GPU is a
+"vertex buffer object" or VBO. For example, here is a bytevector that
+could be transformed into a GPU buffer that packs together vertex
+position and texture coordinates:
+
+     (use-modules (chickadee render buffer) (srfi srfi-4))
+     (define data
+       (f32vector -8.0 -8.0 ; 2D vertex
+                  0.0 0.0   ; 2D texture coordinate
+                  8.0 -8.0  ; 2D vertex
+                  1.0 0.0   ; 2D texture coordinate
+                  8.0 8.0   ; 2D vertex
+                  1.0 1.0   ; 2D texture coordinate
+                  -8.0 8.0  ; 2D vertex
+                  0.0 1.0)) ; 2D texture coordinate
+
+   This data represents a textured 16x16 square centered on the origin.
+To send this data to the GPU, the 'make-buffer' procedure is needed:
+
+     (define buffer (make-buffer data #:stride 16))
+
+   The '#:stride' keyword argument indicates how many bytes make up each
+element of the buffer.  In this case, there are 4 floats per element: 2
+for the vertex, and 2 for the texture coordinate.  A 32-bit float is 4
+bytes in length, so the buffer's stride is 16.
+
+   Within a VBO, one or more "attributes", as OpenGL calls them, may be
+present.  Attributes are subregions within the buffer that have a
+particular data type.  In this case, there are two attributes packed
+into the buffer.  To provided a typed view into a buffer, the
+'make-buffer-view' procedure is needed:
+
+     (define vertices
+       (make-buffer-view #:buffer buffer
+                         #:type 'vec2
+                         #:component-type 'float
+                         #:length 4))
+     (define texcoords
+       (make-buffer-view #:buffer buffer
+                         #:type 'vec2
+                         #:component-type 'float
+                         #:length 4
+                         #:offset 8))
+
+   To render a square, the GPU needs to draw two triangles, which means
+we need 6 vertices in total.  However, the above buffer only contains
+data for 4 vertices.  This is becase there are only 4 unique vertices
+for a square, but 2 of them must be repeated for each triangle.  To work
+with deduplicated vertex data, an "index buffer" must be created.
+
+     (define index-buffer
+       (make-buffer (u32vector 0 3 2 0 2 1)
+                    #:target 'index)
+     (define indices
+       (make-buffer-view #:type 'scalar
+                         #:component-type 'unsigned-int
+                         #:buffer index-buffer))
+
+   Note the use of the '#:target' keyword argument.  It is required
+because the GPU treats index data in a special way and must be told
+which data is index data.
+
+   Now that the buffer views representing each attribute have been
+created, all that's left is to bind them all together in a "vertex array
+object", or VAO. Vertex arrays associate each buffer view with an
+attribute index on the GPU. The indices that are chosen must correspond
+with the indices that the shader (*note Shaders::) expects for each
+attribute.
+
+     (define vertex-array
+       (make-vertex-array #:indices indices
+                          #:attributes `((0 . ,vertices)
+                                         (1 . ,texcoords))))
+
+   With the vertex array created, the GPU is now fully aware of how to
+interpret the data that it has been given in the original buffer.
+Actually rendering this square is left as an exercise to the reader.
+See the *note Shaders:: section and the 'gpu-apply' procedure in *note
+Rendering Engine:: for the remaining pieces of a successful draw call.
+Additionally, consider reading the source code for sprites, shapes, or
+particles to see GPU buffers in action.
+
+   Without further ado, the API reference:
+
+ -- Procedure: make-buffer data [#:name "anonymous"] [#:length]
+          [#:offset 0] [#:stride 0] [#:target 'vertex'] [#:usage
+          'static']
+
+     Upload DATA, a bytevector, to the GPU. By default, the entire
+     bytevector is uploaded.  A subset of the data may be uploaded by
+     specifying the OFFSET, the index of the first byte to be uploaded,
+     and LENGTH, the number of bytes to upload.
+
+     If DATA is '#f', allocate LENGTH bytes of fresh GPU memory instead.
+
+     TARGET and USAGE are hints that tell the GPU how the buffer is
+     intended to be used.
+
+     TARGET may be:
+
+        * 'vertex' Vertex attribute data.
+
+        * 'index' Index buffer data.
+
+     USAGE may be:
+
+        * 'static' The buffer data will not be modified after creation.
+
+        * 'stream' The buffer data will be modified frequently.
+
+     NAME is simply an arbitrary string for debugging purposes that is
+     never sent to the GPU.
+
+ -- Procedure: buffer? obj
+     Return '#t' if OBJ is a GPU buffer.
+
+ -- Procedure: index-buffer? buffer
+     Return '#t' if BUFFER is an index buffer.
+
+ -- Variable: null-buffer
+     Represents the absence of a buffer.
+
+ -- Procedure: buffer-name buffer
+     Return the name of BUFFER.
+
+ -- Procedure: buffer-length buffer
+     Return the length of BUFFER.
+
+ -- Procedure: buffer-stride buffer
+     Return the amount of space, in bytes, between each element in
+     BUFFER.
+
+ -- Procedure: buffer-target buffer
+     Return the the intended usage of BUFFER, either 'vertex' or
+     'index'.
+
+ -- Procedure: buffer-usage buffer
+     Return the intended usage of BUFFER, either 'static' for buffer
+     data that will not change once sent to the GPU, or 'stream' for
+     buffer data that will be frequently updated from the client-side.
+
+ -- Procedure: buffer-data buffer
+     Return a bytevector containing all the data within BUFFER.  If
+     BUFFER has not been mapped (see 'with-mapped-buffer') then this
+     procedure will return '#f'.
+
+ -- Syntax: with-mapped-buffer buffer body ...
+     Evaluate BODY in the context of BUFFER having its data synced from
+     GPU memory to RAM. In this context, 'buffer-data' will return a
+     bytevector of all the data stored in BUFFER.  When program
+     execution exits this form, the data (including any modifications)
+     is synced back to the GPU.
+
+     This form is useful for streaming buffers that need to update their
+     contents dynamically, such as a sprite batch.
+
+ -- Procedure: make-buffer-view #:buffer #:type #:component-type
+          #:length [#:offset '0'] [#:divisor '1'] [#:name '"anonymous"']
+
+     Return a new buffer view for BUFFER starting at byte index OFFSET
+     of LENGTH elements, where each element is of TYPE and composed of
+     COMPONENT-TYPE values.
+
+     Valid values for TYPE are:
+
+        * 'scalar' single number
+
+        * 'vec2' 2D vector
+
+        * 'vec3' 3D vector
+
+        * 'vec4' 4D vector
+
+        * 'mat2' 2x2 matrix
+
+        * 'mat3' 3x3 matrix
+
+        * 'mat4' 4x4 matrix
+
+     Valid values for COMPONENT-TYPE are:
+
+        * 'byte'
+        * 'unsigned-byte'
+        * 'short'
+        * 'unsigned-short'
+        * 'int'
+        * 'unsigned-int'
+        * 'float'
+        * 'double'
+
+     DIVISOR is only needed for instanced rendering applications (see
+     'gpu-apply/instanced' in *note Rendering Engine::) and represents
+     how many instances each vertex element applies to.  A divisor of 0
+     means that a single element is used for every instance and is used
+     for the data being instanced.  A divisor of 1 means that each
+     element is used for 1 instance.  A divisor of 2 means that each
+     element is used for 2 instances, and so on.
+
+ -- Procedure: buffer-view? obj
+     Return '#t' if OBJ is a buffer view.
+
+ -- Procedure: buffer-view->buffer buffer-view
+     Return the buffer that BUFFER-VIEW is using.
+
+ -- Procedure: buffer-view-name buffer-view
+     Return the name of BUFFER-VIEW.
+
+ -- Procedure: buffer-view-offset buffer-view
+     Return the byte offset of BUFFER-VIEW.
+
+ -- Procedure: buffer-view-type buffer-view
+     Return the data type of BUFFER-VIEW.
+
+ -- Procedure: buffer-view-component-type buffer-view
+     Return the component data type of BUFFER-VIEW
+
+ -- Procedure: buffer-view-divisor buffer-view
+     Return the instance divisor for BUFFER-VIEW.
+
+ -- Syntax: with-mapped-buffer-view buffer-view body ...
+
+     Evaluate BODY in the context of BUFFER-VIEW having its data synced
+     from GPU memory to RAM. See 'with-mapped-buffer' for more
+     information.
+
+ -- Procedure: make-vertex-array #:indices #:attributes [#:mode
+          'triangles']
+
+     Return a new vertex array using the index data within the buffer
+     view INDICES and the vertex attribute data within ATTRIBUTES.
+
+     ATTRIBUTES is an alist mapping shader attribute indices to typed
+     buffers containing vertex data:
+
+          `((1 . ,buffer-view-a)
+            (2 . ,buffer-view-b)
+            ...)
+
+     By default, the vertex array is interpreted as containing a series
+     of triangles.  If another primtive type is desired, the MODE
+     keyword argument may be overridden.  The following values are
+     supported:
+
+        * 'points'
+        * 'lines'
+        * 'line-loop'
+        * 'line-strip'
+        * 'triangles'
+        * 'triangle-strip'
+        * 'triangle-fan'
+
+ -- Variable: null-vertex-array
+     Represents the absence of a vertex array.
+
+ -- Procedure: vertex-array? obj
+     Return '#t' if OBJ is a vertex array.
+
+ -- Procedure: vertex-array-indices vertex-array
+     Return the buffer view containing index data for VERTEX-ARRAY.
+
+ -- Procedure: vertex-array-attributes vertex-array
+     Return the attribute index -> buffer view mapping of vertex
+     attribute data for VERTEX-ARRAY.
+
+ -- Procedure: vertex-array-mode vertex-array
+     Return the primitive rendering mode for VERTEX-ARRAY.
+
+
+File: chickadee.info,  Node: Shaders,  Prev: Buffers,  Up: Graphics
+
+2.3.12 Shaders
+--------------
+
+Shaders are programs that the GPU can evaluate that allow the programmer
+to completely customized the final output of a GPU draw call.  The
+'(chickadee render shader)' module provides an API for building custom
+shaders.
+
+   Shaders are written in the OpenGL Shading Language, or GLSL for
+short.  Chickadee aspires to provide a domain specific language for
+writing shaders in Scheme, but we are not there yet.
+
+   Shader programs consist of two components: A vertex shader and a
+fragment shader.  A vertex shader receives vertex data (position
+coordinates, texture coordinates, normals, etc.)  and transforms them as
+desired, whereas a fragment shader controls the color of each pixel.
+
+   Sample vertex shader:
+
+     #version 130
+     
+     in vec2 position;
+     in vec2 tex;
+     out vec2 fragTex;
+     uniform mat4 mvp;
+     
+     void main(void) {
+         fragTex = tex;
+         gl_Position = mvp * vec4(position.xy, 0.0, 1.0);
+     }
+
+   Sample fragment shader:
+
+     #version 130
+     
+     in vec2 fragTex;
+     uniform sampler2D colorTexture;
+     
+     void main (void) {
+         gl_FragColor = texture2D(colorTexture, fragTex);
+     }
+
+   This manual will not cover GLSL features and syntax as there is lots
+of information already available about this topic.
+
+   One way to think about rendering with shaders, and the metaphor
+Chickadee uses, is to think about it as a function call: The shader is a
+function, and it is applied to some "attributes" (positional arguments),
+and some "uniforms" (keyword arguments).
+
+     (define my-shader (load-shader "vert.glsl" "frag.glsl"))
+     (define vertices (make-vertex-array ...))
+     (gpu-apply my-shader vertices #:color red)
+
+   *Note Rendering Engine:: for more details about the 'gpu-apply'
+procedure.
+
+   Shaders are incredibly powerful tools, and there's more information
+about them than we could ever fit into this manual, so we highly
+recommend searching the web for more information and examples.  What we
+can say, though, is how to use our API:
+
+ -- Procedure: strings->shader vertex-source fragment-source
+     Compile VERTEX-SOURCE, the GLSL code for the vertex shader, and
+     FRAGMENT-SOURCE, the GLSL code for the fragment shader, into a GPU
+     shader program.
+
+ -- Procedure: load-shader vertex-source-file fragment-source-file
+     Compile the GLSL source code within VERTEX-SOURCE-FILE and
+     FRAGMENT-SOURCE-FILE into a GPU shader program.
+
+ -- Procedure: make-shader vertex-port fragment-port
+     Read GLSL source from VERTEX-PORT and FRAGMENT-PORT and compile
+     them into a GPU shader program.
+
+ -- Procedure: shader? obj
+     Return '#t' if OBJ is a shader.
+
+ -- Variable: null-shader
+     Represents the absence shader program.
+
+ -- Procedure: shader-uniform shader name
+     Return the metadata for the uniform NAME in SHADER.
+
+ -- Procedure: shader-uniforms shader
+     Return a hash table of uniforms for SHADER.
+
+ -- Procedure: shader-attributes shader
+     Return a hash table of attributes for SHADER.
+
+ -- Procedure: uniform? obj
+     Return '#t' if OBJ is a uniform.
+
+ -- Procedure: uniform-name uniform
+     Return the variable name of UNIFORM.
+
+ -- Procedure: uniform-type uniform
+     Return the data type of UNIFORM.
+
+ -- Procedure: uniform-value uniform
+     Return the current value of UNIFORM.
+
+ -- Procedure: uniform-default-value uniform
+     Return the default value of UNIFORM.
+
+ -- Procedure: attribute? obj
+     Return '#t' if OBJ is an attribute.
+
+ -- Procedure: attribute-name attribute
+     Return the variable name of ATTRIBUTE.
+
+ -- Procedure: attribute-location attribute
+     Return the binding location of ATTRIBUTE.
+
+ -- Procedure: attribute-type attribute
+     Return the data type of ATTRIBUTE.
+
+
+File: chickadee.info,  Node: Scripting,  Prev: Graphics,  Up: API Reference
+
+2.4 Scripting
+=============
+
+Game logic is a web of asynchronous events that are carefully
+coordinated to bring the game world to life.  In order to make an enemy
+follow and attack the player, or move an NPC back and forth in front of
+the item shop, or do both at the same time, a scripting system is a
+necessity.  Chickadee comes with an asynchronous programming system in
+the '(chickadee scripting)' module.  Lightweight, cooperative threads
+known as "scripts" allow the programmer to write asynchronous code as if
+it were synchronous, and allow many such "threads" to run concurrently.
+
+   But before we dig deeper into scripts, let's discuss the simple act
+of scheduling tasks.
+
+* Menu:
+
+* Agendas::                     Scheduling tasks.
+* Scripts::                     Cooperative multitasking.
+* Tweening::                    Animations.
+* Channels::                    Publish data to listeners.
+
+
+File: chickadee.info,  Node: Agendas,  Next: Scripts,  Up: Scripting
+
+2.4.1 Agendas
+-------------
+
+To schedule a task to be performed later, an "agenda" is used.  There is
+a default, global agenda that is ready to be used, or additional agendas
+may be created for different purposes.  The following example prints the
+text "hello" when the agenda has advanced to time unit 10.
+
+     (at 10 (display "hello\n"))
+
+   Most of the time it is more convenient to schedule tasks relative to
+the current time.  This is where 'after' comes in handy:
+
+     (after 10 (display "hello\n"))
+
+   Time units in the agenda are in no way connected to real time.  It's
+up to the programmer to decide what agenda time means.  A simple and
+effective approach is to map each call of the update procedure (*note
+Kernel::) to 1 unit of agenda time, like so:
+
+     (define (update dt)
+       (update-agenda 1))
+
+   It is important to call 'update-agenda' periodically, otherwise no
+tasks will ever be run!
+
+   In addition to using the global agenda, it is useful to have multiple
+agendas for different purposes.  For example, the game world can use a
+different agenda than the user interface, so that pausing the game is a
+simple matter of not updating the world's agenda while continuing to
+update the user interface's agenda.  The current agenda is dynamically
+scoped and can be changed using the 'with-agenda' special form:
+
+     (define game-world-agenda (make-agenda))
+
+     (with-agenda game-world-agenda
+       (at 60 (spawn-goblin))
+       (at 120 (spawn-goblin))
+       (at 240 (spawn-goblin-king)))
+
+ -- Procedure: make-agenda
+     Return a new task scheduler.
+
+ -- Procedure: agenda? obj
+     Return '#t' if OBJ is an agenda.
+
+ -- Procedure: current-agenda
+ -- Procedure: current-agenda agenda
+     When called with no arguments, return the current agenda.  When
+     called with one argument, set the current agenda to AGENDA.
+
+ -- Syntax: with-agenda agenda body ...
+     Evaluate BODY with the current agenda set to AGENDA.
+
+ -- Procedure: agenda-time
+     Return the current agenda time.
+
+ -- Procedure: update-agenda dt
+     Advance the current agenda by DT.
+
+ -- Procedure: schedule-at time thunk
+     Schedule THUNK, a procedure of zero arguments, to be run at TIME.
+
+ -- Procedure: schedule-after delay thunk
+     Schedule THUNK, a procedure of zero arguments, to be run after
+     DELAY.
+
+ -- Procedure: schedule-every interval thunk [n]
+     Schedule THUNK, a procedure of zero arguments, to be run every
+     INTERVAL amount of time.  Repeat this N times, or indefinitely if
+     not specified.
+
+ -- Syntax: at time body ...
+     Schedule BODY to be evaluated at TIME.
+
+ -- Syntax: after delay body ...
+     Schedule BODY to be evaluated after DELAY.
+
+ -- Syntax: every interval body ...
+ -- Syntax: every (interval n) body ...
+     Schedule BODY to be evaluated every INTERVAL amount of time.
+     Repeat this N times, or indefinitely if not specified.
+
+
+File: chickadee.info,  Node: Scripts,  Next: Tweening,  Prev: Agendas,  Up: Scripting
+
+2.4.2 Scripts
+-------------
+
+Now that we can schedule tasks, let's take things to the next level.  It
+sure would be great if we could make procedures that described a series
+of actions that happened over time, especially if we could do so without
+contorting our code into a nest of callback procedures.  This is where
+scripts come in.  With scripts we can write code in a linear way, in a
+manner that appears to be synchronous, but with the ability to suspend
+periodically in order to let other scripts have a turn and prevent
+blocking the game loop.  Building on top of the scheduling that agendas
+provide, here is a script that models a child trying to get their
+mother's attention:
+
+     (script
+       (while #t
+         (display "mom!")
+         (newline)
+         (sleep 60))) ; where 60 = 1 second of real time
+
+   This code runs in an endless loop, but the 'sleep' procedure suspends
+the script and schedules it to be run later by the agenda.  So, after
+each iteration of the loop, control is returned back to the game loop
+and the program is not stuck spinning in a loop that will never exit.
+Pretty neat, eh?
+
+   Scripts can suspend to any capable handler, not just the agenda.  The
+'yield' procedure will suspend the current script and pass its
+"continuation" to a handler procedure.  This handler procedure could do
+anything.  Perhaps the handler stashes the continuation somewhere where
+it will be resumed when the user presses a specific key on the keyboard,
+or maybe it will be resumed when the player picks up an item off of the
+dungeon floor; the sky is the limit.
+
+   Sometimes it is necessary to abruptly terminate a script after it has
+been started.  For example, when an enemy is defeated their AI routine
+needs to be shut down.  When a script is spawned, a handle to that
+script is returned that can be used to cancel it when desired.
+
+     (define script (script (while #t (display "hey\n") (sleep 60))))
+     ;; sometime later
+     (cancel-script script)
+
+ -- Procedure: spawn-script thunk
+     Apply THUNK as a script and return a handle to it.
+
+ -- Syntax: script body ...
+     Evaluate BODY as a script and return a handle to it.
+
+ -- Procedure: script? obj
+     Return '#t' if OBJ is a script handle.
+
+ -- Procedure: script-cancelled? obj
+     Return '#t' if OBJ has been cancelled.
+
+ -- Procedure: script-running? obj
+     Return '#t' if OBJ has not yet terminated or been cancelled.
+
+ -- Procedure: script-complete? obj
+     Return '#t' if OBJ has terminated.
+
+ -- Procedure: cancel-script co
+     Prevent further execution of the script CO.
+
+ -- Procedure: yield handler
+     Suspend the current script and pass its continuation to the
+     procedure HANDLER.
+
+ -- Procedure: sleep duration
+     Wait DURATION before resuming the current script.
+
+ -- Syntax: forever body ...
+     Evaluate BODY in an endless loop.
+
+
+File: chickadee.info,  Node: Tweening,  Next: Channels,  Prev: Scripts,  Up: Scripting
+
+2.4.3 Tweening
+--------------
+
+Tweening is the process of transitioning something from an initial state
+to a final state over a pre-determined period of time.  In other words,
+tweening is a way to create animation.  The 'tween' procedure can be
+used within any script like so:
+
+     (define x 0)
+     (script
+       ;; 0 to 100 in 60 ticks of the agenda.
+       (tween 60 0 100 (lambda (y) (set! x y))))
+
+ -- Procedure: tween duration start end proc [#:step '1'] [#:ease
+          'smoothstep'] #:interpolate 'lerp']
+     Transition a value from START to END over DURATION, sending each
+     succesive value to PROC.  STEP controls the amount of time between
+     each update of the animation.
+
+     To control how the animation goes from the initial to final state,
+     an "easing" procedure may be specified.  By default, the
+     'smoothstep' easing is used, which is a more pleasing default than
+     a simplistic linear function.  *Note Easings:: for a complete list
+     of available easing procedures.
+
+     The INTERPOLATE procedure computes the values in between START and
+     END.  By default, linear interpolation ("lerp" for short) is used.
+
+
+File: chickadee.info,  Node: Channels,  Prev: Tweening,  Up: Scripting
+
+2.4.4 Channels
+--------------
+
+Channels are a tool for communicating amongst different scripts.  One
+script can write a value to the channel and another can read from it.
+Reading or writing to a channel suspends that script until there is
+someone on the other end of the line to complete the transaction.
+
+   Here's a simplistic example:
+
+     (define c (make-channel))
+
+     (script
+      (forever
+       (let ((item (channel-get c)))
+         (pk 'got item))))
+
+     (script
+      (channel-put c 'sword)
+      (channel-put c 'shield)
+      (channel-put c 'potion))
+
+ -- Procedure: make-channel
+     Return a new channel
+
+ -- Procedure: channel? obj
+     Return '#t' if OBJ is a channel.
+
+ -- Procedure: channel-get channel
+     Retrieve a value from CHANNEL.  The current script suspends until a
+     value is available.
+
+ -- Procedure: channel-put channel data
+     Send DATA to CHANNEL.  The current script suspends until another
+     script is available to retrieve the value.
+
+   A low-level API also exists for using channels outside of a script
+via callback procedures:
+
+ -- Procedure: channel-get! channel proc
+     Asynchronously retrieve a value from CHANNEL and call PROC with
+     that value.
+
+ -- Procedure: channel-put! channel data [thunk]
+     Asynchronously send DATA to CHANNEL and call THUNK after it has
+     been received.
+
+
+File: chickadee.info,  Node: Copying This Manual,  Next: Index,  Prev: API Reference,  Up: Top
+
+Appendix A Copying This Manual
+******************************
+
+* Menu:
+
+* GNU Free Documentation License::  License for copying this manual.
+
+
+File: chickadee.info,  Node: GNU Free Documentation License,  Up: Copying This Manual
+
+A.1 GNU Free Documentation License
+==================================
+
+                     Version 1.3, 3 November 2008
+
+     Copyright (C) 2000, 2001, 2002, 2007, 2008 Free Software Foundation, Inc.
+     <http://fsf.org/>
+
+     Everyone is permitted to copy and distribute verbatim copies
+     of this license document, but changing it is not allowed.
+
+  0. PREAMBLE
+
+     The purpose of this License is to make a manual, textbook, or other
+     functional and useful document "free" in the sense of freedom: to
+     assure everyone the effective freedom to copy and redistribute it,
+     with or without modifying it, either commercially or
+     noncommercially.  Secondarily, this License preserves for the
+     author and publisher a way to get credit for their work, while not
+     being considered responsible for modifications made by others.
+
+     This License is a kind of "copyleft", which means that derivative
+     works of the document must themselves be free in the same sense.
+     It complements the GNU General Public License, which is a copyleft
+     license designed for free software.
+
+     We have designed this License in order to use it for manuals for
+     free software, because free software needs free documentation: a
+     free program should come with manuals providing the same freedoms
+     that the software does.  But this License is not limited to
+     software manuals; it can be used for any textual work, regardless
+     of subject matter or whether it is published as a printed book.  We
+     recommend this License principally for works whose purpose is
+     instruction or reference.
+
+  1. APPLICABILITY AND DEFINITIONS
+
+     This License applies to any manual or other work, in any medium,
+     that contains a notice placed by the copyright holder saying it can
+     be distributed under the terms of this License.  Such a notice
+     grants a world-wide, royalty-free license, unlimited in duration,
+     to use that work under the conditions stated herein.  The
+     "Document", below, refers to any such manual or work.  Any member
+     of the public is a licensee, and is addressed as "you".  You accept
+     the license if you copy, modify or distribute the work in a way
+     requiring permission under copyright law.
+
+     A "Modified Version" of the Document means any work containing the
+     Document or a portion of it, either copied verbatim, or with
+     modifications and/or translated into another language.
+
+     A "Secondary Section" is a named appendix or a front-matter section
+     of the Document that deals exclusively with the relationship of the
+     publishers or authors of the Document to the Document's overall
+     subject (or to related matters) and contains nothing that could
+     fall directly within that overall subject.  (Thus, if the Document
+     is in part a textbook of mathematics, a Secondary Section may not
+     explain any mathematics.)  The relationship could be a matter of
+     historical connection with the subject or with related matters, or
+     of legal, commercial, philosophical, ethical or political position
+     regarding them.
+
+     The "Invariant Sections" are certain Secondary Sections whose
+     titles are designated, as being those of Invariant Sections, in the
+     notice that says that the Document is released under this License.
+     If a section does not fit the above definition of Secondary then it
+     is not allowed to be designated as Invariant.  The Document may
+     contain zero Invariant Sections.  If the Document does not identify
+     any Invariant Sections then there are none.
+
+     The "Cover Texts" are certain short passages of text that are
+     listed, as Front-Cover Texts or Back-Cover Texts, in the notice
+     that says that the Document is released under this License.  A
+     Front-Cover Text may be at most 5 words, and a Back-Cover Text may
+     be at most 25 words.
+
+     A "Transparent" copy of the Document means a machine-readable copy,
+     represented in a format whose specification is available to the
+     general public, that is suitable for revising the document
+     straightforwardly with generic text editors or (for images composed
+     of pixels) generic paint programs or (for drawings) some widely
+     available drawing editor, and that is suitable for input to text
+     formatters or for automatic translation to a variety of formats
+     suitable for input to text formatters.  A copy made in an otherwise
+     Transparent file format whose markup, or absence of markup, has
+     been arranged to thwart or discourage subsequent modification by
+     readers is not Transparent.  An image format is not Transparent if
+     used for any substantial amount of text.  A copy that is not
+     "Transparent" is called "Opaque".
+
+     Examples of suitable formats for Transparent copies include plain
+     ASCII without markup, Texinfo input format, LaTeX input format,
+     SGML or XML using a publicly available DTD, and standard-conforming
+     simple HTML, PostScript or PDF designed for human modification.
+     Examples of transparent image formats include PNG, XCF and JPG.
+     Opaque formats include proprietary formats that can be read and
+     edited only by proprietary word processors, SGML or XML for which
+     the DTD and/or processing tools are not generally available, and
+     the machine-generated HTML, PostScript or PDF produced by some word
+     processors for output purposes only.
+
+     The "Title Page" means, for a printed book, the title page itself,
+     plus such following pages as are needed to hold, legibly, the
+     material this License requires to appear in the title page.  For
+     works in formats which do not have any title page as such, "Title
+     Page" means the text near the most prominent appearance of the
+     work's title, preceding the beginning of the body of the text.
+
+     The "publisher" means any person or entity that distributes copies
+     of the Document to the public.
+
+     A section "Entitled XYZ" means a named subunit of the Document
+     whose title either is precisely XYZ or contains XYZ in parentheses
+     following text that translates XYZ in another language.  (Here XYZ
+     stands for a specific section name mentioned below, such as
+     "Acknowledgements", "Dedications", "Endorsements", or "History".)
+     To "Preserve the Title" of such a section when you modify the
+     Document means that it remains a section "Entitled XYZ" according
+     to this definition.
+
+     The Document may include Warranty Disclaimers next to the notice
+     which states that this License applies to the Document.  These
+     Warranty Disclaimers are considered to be included by reference in
+     this License, but only as regards disclaiming warranties: any other
+     implication that these Warranty Disclaimers may have is void and
+     has no effect on the meaning of this License.
+
+  2. VERBATIM COPYING
+
+     You may copy and distribute the Document in any medium, either
+     commercially or noncommercially, provided that this License, the
+     copyright notices, and the license notice saying this License
+     applies to the Document are reproduced in all copies, and that you
+     add no other conditions whatsoever to those of this License.  You
+     may not use technical measures to obstruct or control the reading
+     or further copying of the copies you make or distribute.  However,
+     you may accept compensation in exchange for copies.  If you
+     distribute a large enough number of copies you must also follow the
+     conditions in section 3.
+
+     You may also lend copies, under the same conditions stated above,
+     and you may publicly display copies.
+
+  3. COPYING IN QUANTITY
+
+     If you publish printed copies (or copies in media that commonly
+     have printed covers) of the Document, numbering more than 100, and
+     the Document's license notice requires Cover Texts, you must
+     enclose the copies in covers that carry, clearly and legibly, all
+     these Cover Texts: Front-Cover Texts on the front cover, and
+     Back-Cover Texts on the back cover.  Both covers must also clearly
+     and legibly identify you as the publisher of these copies.  The
+     front cover must present the full title with all words of the title
+     equally prominent and visible.  You may add other material on the
+     covers in addition.  Copying with changes limited to the covers, as
+     long as they preserve the title of the Document and satisfy these
+     conditions, can be treated as verbatim copying in other respects.
+
+     If the required texts for either cover are too voluminous to fit
+     legibly, you should put the first ones listed (as many as fit
+     reasonably) on the actual cover, and continue the rest onto
+     adjacent pages.
+
+     If you publish or distribute Opaque copies of the Document
+     numbering more than 100, you must either include a machine-readable
+     Transparent copy along with each Opaque copy, or state in or with
+     each Opaque copy a computer-network location from which the general
+     network-using public has access to download using public-standard
+     network protocols a complete Transparent copy of the Document, free
+     of added material.  If you use the latter option, you must take
+     reasonably prudent steps, when you begin distribution of Opaque
+     copies in quantity, to ensure that this Transparent copy will
+     remain thus accessible at the stated location until at least one
+     year after the last time you distribute an Opaque copy (directly or
+     through your agents or retailers) of that edition to the public.
+
+     It is requested, but not required, that you contact the authors of
+     the Document well before redistributing any large number of copies,
+     to give them a chance to provide you with an updated version of the
+     Document.
+
+  4. MODIFICATIONS
+
+     You may copy and distribute a Modified Version of the Document
+     under the conditions of sections 2 and 3 above, provided that you
+     release the Modified Version under precisely this License, with the
+     Modified Version filling the role of the Document, thus licensing
+     distribution and modification of the Modified Version to whoever
+     possesses a copy of it.  In addition, you must do these things in
+     the Modified Version:
+
+       A. Use in the Title Page (and on the covers, if any) a title
+          distinct from that of the Document, and from those of previous
+          versions (which should, if there were any, be listed in the
+          History section of the Document).  You may use the same title
+          as a previous version if the original publisher of that
+          version gives permission.
+
+       B. List on the Title Page, as authors, one or more persons or
+          entities responsible for authorship of the modifications in
+          the Modified Version, together with at least five of the
+          principal authors of the Document (all of its principal
+          authors, if it has fewer than five), unless they release you
+          from this requirement.
+
+       C. State on the Title page the name of the publisher of the
+          Modified Version, as the publisher.
+
+       D. Preserve all the copyright notices of the Document.
+
+       E. Add an appropriate copyright notice for your modifications
+          adjacent to the other copyright notices.
+
+       F. Include, immediately after the copyright notices, a license
+          notice giving the public permission to use the Modified
+          Version under the terms of this License, in the form shown in
+          the Addendum below.
+
+       G. Preserve in that license notice the full lists of Invariant
+          Sections and required Cover Texts given in the Document's
+          license notice.
+
+       H. Include an unaltered copy of this License.
+
+       I. Preserve the section Entitled "History", Preserve its Title,
+          and add to it an item stating at least the title, year, new
+          authors, and publisher of the Modified Version as given on the
+          Title Page.  If there is no section Entitled "History" in the
+          Document, create one stating the title, year, authors, and
+          publisher of the Document as given on its Title Page, then add
+          an item describing the Modified Version as stated in the
+          previous sentence.
+
+       J. Preserve the network location, if any, given in the Document
+          for public access to a Transparent copy of the Document, and
+          likewise the network locations given in the Document for
+          previous versions it was based on.  These may be placed in the
+          "History" section.  You may omit a network location for a work
+          that was published at least four years before the Document
+          itself, or if the original publisher of the version it refers
+          to gives permission.
+
+       K. For any section Entitled "Acknowledgements" or "Dedications",
+          Preserve the Title of the section, and preserve in the section
+          all the substance and tone of each of the contributor
+          acknowledgements and/or dedications given therein.
+
+       L. Preserve all the Invariant Sections of the Document, unaltered
+          in their text and in their titles.  Section numbers or the
+          equivalent are not considered part of the section titles.
+
+       M. Delete any section Entitled "Endorsements".  Such a section
+          may not be included in the Modified Version.
+
+       N. Do not retitle any existing section to be Entitled
+          "Endorsements" or to conflict in title with any Invariant
+          Section.
+
+       O. Preserve any Warranty Disclaimers.
+
+     If the Modified Version includes new front-matter sections or
+     appendices that qualify as Secondary Sections and contain no
+     material copied from the Document, you may at your option designate
+     some or all of these sections as invariant.  To do this, add their
+     titles to the list of Invariant Sections in the Modified Version's
+     license notice.  These titles must be distinct from any other
+     section titles.
+
+     You may add a section Entitled "Endorsements", provided it contains
+     nothing but endorsements of your Modified Version by various
+     parties--for example, statements of peer review or that the text
+     has been approved by an organization as the authoritative
+     definition of a standard.
+
+     You may add a passage of up to five words as a Front-Cover Text,
+     and a passage of up to 25 words as a Back-Cover Text, to the end of
+     the list of Cover Texts in the Modified Version.  Only one passage
+     of Front-Cover Text and one of Back-Cover Text may be added by (or
+     through arrangements made by) any one entity.  If the Document
+     already includes a cover text for the same cover, previously added
+     by you or by arrangement made by the same entity you are acting on
+     behalf of, you may not add another; but you may replace the old
+     one, on explicit permission from the previous publisher that added
+     the old one.
+
+     The author(s) and publisher(s) of the Document do not by this
+     License give permission to use their names for publicity for or to
+     assert or imply endorsement of any Modified Version.
+
+  5. COMBINING DOCUMENTS
+
+     You may combine the Document with other documents released under
+     this License, under the terms defined in section 4 above for
+     modified versions, provided that you include in the combination all
+     of the Invariant Sections of all of the original documents,
+     unmodified, and list them all as Invariant Sections of your
+     combined work in its license notice, and that you preserve all
+     their Warranty Disclaimers.
+
+     The combined work need only contain one copy of this License, and
+     multiple identical Invariant Sections may be replaced with a single
+     copy.  If there are multiple Invariant Sections with the same name
+     but different contents, make the title of each such section unique
+     by adding at the end of it, in parentheses, the name of the
+     original author or publisher of that section if known, or else a
+     unique number.  Make the same adjustment to the section titles in
+     the list of Invariant Sections in the license notice of the
+     combined work.
+
+     In the combination, you must combine any sections Entitled
+     "History" in the various original documents, forming one section
+     Entitled "History"; likewise combine any sections Entitled
+     "Acknowledgements", and any sections Entitled "Dedications".  You
+     must delete all sections Entitled "Endorsements."
+
+  6. COLLECTIONS OF DOCUMENTS
+
+     You may make a collection consisting of the Document and other
+     documents released under this License, and replace the individual
+     copies of this License in the various documents with a single copy
+     that is included in the collection, provided that you follow the
+     rules of this License for verbatim copying of each of the documents
+     in all other respects.
+
+     You may extract a single document from such a collection, and
+     distribute it individually under this License, provided you insert
+     a copy of this License into the extracted document, and follow this
+     License in all other respects regarding verbatim copying of that
+     document.
+
+  7. AGGREGATION WITH INDEPENDENT WORKS
+
+     A compilation of the Document or its derivatives with other
+     separate and independent documents or works, in or on a volume of a
+     storage or distribution medium, is called an "aggregate" if the
+     copyright resulting from the compilation is not used to limit the
+     legal rights of the compilation's users beyond what the individual
+     works permit.  When the Document is included in an aggregate, this
+     License does not apply to the other works in the aggregate which
+     are not themselves derivative works of the Document.
+
+     If the Cover Text requirement of section 3 is applicable to these
+     copies of the Document, then if the Document is less than one half
+     of the entire aggregate, the Document's Cover Texts may be placed
+     on covers that bracket the Document within the aggregate, or the
+     electronic equivalent of covers if the Document is in electronic
+     form.  Otherwise they must appear on printed covers that bracket
+     the whole aggregate.
+
+  8. TRANSLATION
+
+     Translation is considered a kind of modification, so you may
+     distribute translations of the Document under the terms of section
+     4.  Replacing Invariant Sections with translations requires special
+     permission from their copyright holders, but you may include
+     translations of some or all Invariant Sections in addition to the
+     original versions of these Invariant Sections.  You may include a
+     translation of this License, and all the license notices in the
+     Document, and any Warranty Disclaimers, provided that you also
+     include the original English version of this License and the
+     original versions of those notices and disclaimers.  In case of a
+     disagreement between the translation and the original version of
+     this License or a notice or disclaimer, the original version will
+     prevail.
+
+     If a section in the Document is Entitled "Acknowledgements",
+     "Dedications", or "History", the requirement (section 4) to
+     Preserve its Title (section 1) will typically require changing the
+     actual title.
+
+  9. TERMINATION
+
+     You may not copy, modify, sublicense, or distribute the Document
+     except as expressly provided under this License.  Any attempt
+     otherwise to copy, modify, sublicense, or distribute it is void,
+     and will automatically terminate your rights under this License.
+
+     However, if you cease all violation of this License, then your
+     license from a particular copyright holder is reinstated (a)
+     provisionally, unless and until the copyright holder explicitly and
+     finally terminates your license, and (b) permanently, if the
+     copyright holder fails to notify you of the violation by some
+     reasonable means prior to 60 days after the cessation.
+
+     Moreover, your license from a particular copyright holder is
+     reinstated permanently if the copyright holder notifies you of the
+     violation by some reasonable means, this is the first time you have
+     received notice of violation of this License (for any work) from
+     that copyright holder, and you cure the violation prior to 30 days
+     after your receipt of the notice.
+
+     Termination of your rights under this section does not terminate
+     the licenses of parties who have received copies or rights from you
+     under this License.  If your rights have been terminated and not
+     permanently reinstated, receipt of a copy of some or all of the
+     same material does not give you any rights to use it.
+
+  10. FUTURE REVISIONS OF THIS LICENSE
+
+     The Free Software Foundation may publish new, revised versions of
+     the GNU Free Documentation License from time to time.  Such new
+     versions will be similar in spirit to the present version, but may
+     differ in detail to address new problems or concerns.  See
+     <http://www.gnu.org/copyleft/>.
+
+     Each version of the License is given a distinguishing version
+     number.  If the Document specifies that a particular numbered
+     version of this License "or any later version" applies to it, you
+     have the option of following the terms and conditions either of
+     that specified version or of any later version that has been
+     published (not as a draft) by the Free Software Foundation.  If the
+     Document does not specify a version number of this License, you may
+     choose any version ever published (not as a draft) by the Free
+     Software Foundation.  If the Document specifies that a proxy can
+     decide which future versions of this License can be used, that
+     proxy's public statement of acceptance of a version permanently
+     authorizes you to choose that version for the Document.
+
+  11. RELICENSING
+
+     "Massive Multiauthor Collaboration Site" (or "MMC Site") means any
+     World Wide Web server that publishes copyrightable works and also
+     provides prominent facilities for anybody to edit those works.  A
+     public wiki that anybody can edit is an example of such a server.
+     A "Massive Multiauthor Collaboration" (or "MMC") contained in the
+     site means any set of copyrightable works thus published on the MMC
+     site.
+
+     "CC-BY-SA" means the Creative Commons Attribution-Share Alike 3.0
+     license published by Creative Commons Corporation, a not-for-profit
+     corporation with a principal place of business in San Francisco,
+     California, as well as future copyleft versions of that license
+     published by that same organization.
+
+     "Incorporate" means to publish or republish a Document, in whole or
+     in part, as part of another Document.
+
+     An MMC is "eligible for relicensing" if it is licensed under this
+     License, and if all works that were first published under this
+     License somewhere other than this MMC, and subsequently
+     incorporated in whole or in part into the MMC, (1) had no cover
+     texts or invariant sections, and (2) were thus incorporated prior
+     to November 1, 2008.
+
+     The operator of an MMC Site may republish an MMC contained in the
+     site under CC-BY-SA on the same site at any time before August 1,
+     2009, provided the MMC is eligible for relicensing.
+
+ADDENDUM: How to use this License for your documents
+====================================================
+
+To use this License in a document you have written, include a copy of
+the License in the document and put the following copyright and license
+notices just after the title page:
+
+       Copyright (C)  YEAR  YOUR NAME.
+       Permission is granted to copy, distribute and/or modify this document
+       under the terms of the GNU Free Documentation License, Version 1.3
+       or any later version published by the Free Software Foundation;
+       with no Invariant Sections, no Front-Cover Texts, and no Back-Cover
+       Texts.  A copy of the license is included in the section entitled ``GNU
+       Free Documentation License''.
+
+   If you have Invariant Sections, Front-Cover Texts and Back-Cover
+Texts, replace the "with...Texts." line with this:
+
+         with the Invariant Sections being LIST THEIR TITLES, with
+         the Front-Cover Texts being LIST, and with the Back-Cover Texts
+         being LIST.
+
+   If you have Invariant Sections without Cover Texts, or some other
+combination of the three, merge those two alternatives to suit the
+situation.
+
+   If your document contains nontrivial examples of program code, we
+recommend releasing these examples in parallel under your choice of free
+software license, such as the GNU General Public License, to permit
+their use in free software.
+
+
+File: chickadee.info,  Node: Index,  Prev: Copying This Manual,  Up: Top
+
+Index
+*****
+
+ [index ]
+* Menu:
+
+* a*:                                    Path Finding.        (line  57)
+* abort-game:                            Kernel.              (line  64)
+* add-particle-emitter:                  Particles.           (line 126)
+* after:                                 Agendas.             (line  78)
+* agenda-time:                           Agendas.             (line  57)
+* agenda?:                               Agendas.             (line  46)
+* animation-frame-duration:              Tile Maps.           (line 110)
+* animation-frame-tile:                  Tile Maps.           (line 107)
+* animation-frame?:                      Tile Maps.           (line 104)
+* at:                                    Agendas.             (line  75)
+* attribute-location:                    Shaders.             (line 114)
+* attribute-name:                        Shaders.             (line 111)
+* attribute-type:                        Shaders.             (line 117)
+* attribute?:                            Shaders.             (line 108)
+* bezier-curve-p0:                       Bezier Curves.       (line  28)
+* bezier-curve-p1:                       Bezier Curves.       (line  31)
+* bezier-curve-p2:                       Bezier Curves.       (line  34)
+* bezier-curve-p3:                       Bezier Curves.       (line  37)
+* bezier-curve-point-at:                 Bezier Curves.       (line  45)
+* bezier-curve-point-at!:                Bezier Curves.       (line  50)
+* bezier-curve?:                         Bezier Curves.       (line  25)
+* bezier-path:                           Bezier Curves.       (line  40)
+* buffer-data:                           Buffers.             (line 154)
+* buffer-length:                         Buffers.             (line 138)
+* buffer-name:                           Buffers.             (line 135)
+* buffer-stride:                         Buffers.             (line 141)
+* buffer-target:                         Buffers.             (line 145)
+* buffer-usage:                          Buffers.             (line 149)
+* buffer-view->buffer:                   Buffers.             (line 214)
+* buffer-view-component-type:            Buffers.             (line 226)
+* buffer-view-divisor:                   Buffers.             (line 229)
+* buffer-view-name:                      Buffers.             (line 217)
+* buffer-view-offset:                    Buffers.             (line 220)
+* buffer-view-type:                      Buffers.             (line 223)
+* buffer-view?:                          Buffers.             (line 211)
+* buffer?:                               Buffers.             (line 126)
+* cancel-script:                         Scripts.             (line  64)
+* cell-count:                            Grid.                (line  47)
+* cell?:                                 Grid.                (line  44)
+* channel-get:                           Channels.            (line  31)
+* channel-get!:                          Channels.            (line  42)
+* channel-put:                           Channels.            (line  35)
+* channel-put!:                          Channels.            (line  46)
+* channel?:                              Channels.            (line  28)
+* cotan:                                 Basics.              (line  15)
+* current-agenda:                        Agendas.             (line  49)
+* current-agenda <1>:                    Agendas.             (line  50)
+* current-blend-mode:                    Rendering Engine.    (line  55)
+* current-depth-test:                    Rendering Engine.    (line  58)
+* current-framebuffer:                   Rendering Engine.    (line  52)
+* current-projection:                    Rendering Engine.    (line  65)
+* current-texture:                       Rendering Engine.    (line  62)
+* current-viewport:                      Rendering Engine.    (line  49)
+* draw-bezier-curve:                     Lines and Shapes.    (line  20)
+* draw-bezier-path:                      Lines and Shapes.    (line  38)
+* draw-line:                             Lines and Shapes.    (line   9)
+* draw-nine-patch:                       Sprites.             (line  99)
+* draw-particles:                        Particles.           (line  98)
+* draw-particles*:                       Particles.           (line 101)
+* draw-sprite:                           Sprites.             (line  13)
+* draw-sprite-batch:                     Sprites.             (line  76)
+* draw-text:                             Fonts.               (line  41)
+* draw-tile-map:                         Tile Maps.           (line  46)
+* ease-in-cubic:                         Easings.             (line  25)
+* ease-in-out-cubic:                     Easings.             (line  29)
+* ease-in-out-quad:                      Easings.             (line  23)
+* ease-in-out-quart:                     Easings.             (line  35)
+* ease-in-out-quint:                     Easings.             (line  41)
+* ease-in-out-sine:                      Easings.             (line  47)
+* ease-in-quad:                          Easings.             (line  19)
+* ease-in-quart:                         Easings.             (line  31)
+* ease-in-quint:                         Easings.             (line  37)
+* ease-in-sine:                          Easings.             (line  43)
+* ease-out-cubic:                        Easings.             (line  27)
+* ease-out-quad:                         Easings.             (line  21)
+* ease-out-quart:                        Easings.             (line  33)
+* ease-out-quint:                        Easings.             (line  39)
+* ease-out-sine:                         Easings.             (line  45)
+* every:                                 Agendas.             (line  81)
+* every <1>:                             Agendas.             (line  82)
+* font-bold?:                            Fonts.               (line  35)
+* font-face:                             Fonts.               (line  26)
+* font-italic?:                          Fonts.               (line  38)
+* font-line-height:                      Fonts.               (line  29)
+* font-line-height <1>:                  Fonts.               (line  32)
+* font?:                                 Fonts.               (line  23)
+* for-each-cell:                         Grid.                (line  76)
+* for-each-item:                         Grid.                (line  80)
+* forever:                               Scripts.             (line  74)
+* framebuffer-texture:                   Framebuffers.        (line  32)
+* framebuffer-viewport:                  Framebuffers.        (line  35)
+* framebuffer?:                          Framebuffers.        (line  29)
+* gpu-apply:                             Rendering Engine.    (line  22)
+* gpu-apply*:                            Rendering Engine.    (line  24)
+* gpu-apply/instanced:                   Rendering Engine.    (line  33)
+* gpu-apply/instanced <1>:               Rendering Engine.    (line  35)
+* grid-add:                              Grid.                (line  59)
+* grid-cell-count:                       Grid.                (line  53)
+* grid-cell-size:                        Grid.                (line  50)
+* grid-clear:                            Grid.                (line  67)
+* grid-item-count:                       Grid.                (line  56)
+* grid-move:                             Grid.                (line  70)
+* grid-remove:                           Grid.                (line  64)
+* grid?:                                 Grid.                (line  41)
+* index-buffer?:                         Buffers.             (line 129)
+* linear:                                Easings.             (line  15)
+* load-font:                             Fonts.               (line  19)
+* load-image:                            Textures.            (line   6)
+* load-shader:                           Shaders.             (line  70)
+* load-tile-map:                         Tile Maps.           (line  12)
+* make-agenda:                           Agendas.             (line  43)
+* make-bezier-curve:                     Bezier Curves.       (line  20)
+* make-buffer:                           Buffers.             (line  97)
+* make-buffer-view:                      Buffers.             (line 169)
+* make-channel:                          Channels.            (line  25)
+* make-framebuffer:                      Framebuffers.        (line  16)
+* make-grid:                             Grid.                (line  38)
+* make-identity-matrix4:                 Matrices.            (line  30)
+* make-identity-quaternion:              Quaternions.         (line  31)
+* make-matrix4:                          Matrices.            (line  21)
+* make-null-matrix4:                     Matrices.            (line  27)
+* make-particle-emitter:                 Particles.           (line 104)
+* make-particles:                        Particles.           (line  35)
+* make-path-finder:                      Path Finding.        (line  51)
+* make-rect:                             Rectangles.          (line  18)
+* make-shader:                           Shaders.             (line  74)
+* make-sprite-batch:                     Sprites.             (line  48)
+* make-vertex-array:                     Buffers.             (line 238)
+* make-viewport:                         Viewports.           (line  17)
+* map-object-id:                         Tile Maps.           (line 152)
+* map-object-name:                       Tile Maps.           (line 155)
+* map-object-properties:                 Tile Maps.           (line 164)
+* map-object-shape:                      Tile Maps.           (line 161)
+* map-object-type:                       Tile Maps.           (line 158)
+* map-object?:                           Tile Maps.           (line 149)
+* matrix4*:                              Matrices.            (line  43)
+* matrix4-2d-transform!:                 Matrices.            (line 104)
+* matrix4-identity!:                     Matrices.            (line  80)
+* matrix4-mult!:                         Matrices.            (line  83)
+* matrix4-rotate:                        Matrices.            (line  72)
+* matrix4-rotate!:                       Matrices.            (line  96)
+* matrix4-rotate-z:                      Matrices.            (line  76)
+* matrix4-rotate-z!:                     Matrices.            (line 100)
+* matrix4-scale:                         Matrices.            (line  68)
+* matrix4-scale!:                        Matrices.            (line  92)
+* matrix4-translate:                     Matrices.            (line  63)
+* matrix4-translate!:                    Matrices.            (line  87)
+* matrix4?:                              Matrices.            (line  40)
+* null-buffer:                           Buffers.             (line 132)
+* null-framebuffer:                      Framebuffers.        (line  39)
+* null-shader:                           Shaders.             (line  81)
+* null-vertex-array:                     Buffers.             (line 264)
+* object-layer-name:                     Tile Maps.           (line 137)
+* object-layer-objects:                  Tile Maps.           (line 140)
+* object-layer-properties:               Tile Maps.           (line 143)
+* object-layer?:                         Tile Maps.           (line 134)
+* orthographic-projection:               Matrices.            (line  49)
+* particle-emitter-done?:                Particles.           (line 123)
+* particle-emitter-life:                 Particles.           (line 120)
+* particle-emitter-rate:                 Particles.           (line 117)
+* particle-emitter-spawn-area:           Particles.           (line 114)
+* particle-emitter?:                     Particles.           (line 111)
+* particles?:                            Particles.           (line  92)
+* path-finder?:                          Path Finding.        (line  54)
+* perspective-projection:                Matrices.            (line  56)
+* pi:                                    Basics.              (line   6)
+* pi/2:                                  Basics.              (line  12)
+* point->tile:                           Tile Maps.           (line  43)
+* polygon-points:                        Tile Maps.           (line 173)
+* polygon?:                              Tile Maps.           (line 170)
+* quaternion:                            Quaternions.         (line  13)
+* quaternion-w:                          Quaternions.         (line  19)
+* quaternion-x:                          Quaternions.         (line  22)
+* quaternion-y:                          Quaternions.         (line  25)
+* quaternion-z:                          Quaternions.         (line  28)
+* quaternion?:                           Quaternions.         (line  16)
+* rect:                                  Rectangles.          (line  17)
+* rect-area:                             Rectangles.          (line  67)
+* rect-bottom:                           Rectangles.          (line  49)
+* rect-center-x:                         Rectangles.          (line  55)
+* rect-center-y:                         Rectangles.          (line  58)
+* rect-clamp:                            Rectangles.          (line  76)
+* rect-clamp!:                           Rectangles.          (line 146)
+* rect-clamp-x:                          Rectangles.          (line  70)
+* rect-clamp-y:                          Rectangles.          (line  73)
+* rect-clip:                             Rectangles.          (line 106)
+* rect-clip!:                            Rectangles.          (line 142)
+* rect-contains-vec2?:                   Rectangles.          (line  34)
+* rect-contains?:                        Rectangles.          (line  31)
+* rect-height:                           Rectangles.          (line  64)
+* rect-inflate:                          Rectangles.          (line  97)
+* rect-inflate!:                         Rectangles.          (line 135)
+* rect-intersects?:                      Rectangles.          (line  28)
+* rect-left:                             Rectangles.          (line  43)
+* rect-move:                             Rectangles.          (line  81)
+* rect-move!:                            Rectangles.          (line 123)
+* rect-move-by:                          Rectangles.          (line  89)
+* rect-move-by!:                         Rectangles.          (line 129)
+* rect-move-by-vec2:                     Rectangles.          (line  93)
+* rect-move-by-vec2!:                    Rectangles.          (line 132)
+* rect-move-vec2:                        Rectangles.          (line  85)
+* rect-move-vec2!:                       Rectangles.          (line 126)
+* rect-right:                            Rectangles.          (line  46)
+* rect-top:                              Rectangles.          (line  52)
+* rect-union:                            Rectangles.          (line 102)
+* rect-union!:                           Rectangles.          (line 138)
+* rect-width:                            Rectangles.          (line  61)
+* rect-within?:                          Rectangles.          (line  25)
+* rect-x:                                Rectangles.          (line  37)
+* rect-y:                                Rectangles.          (line  40)
+* rect?:                                 Rectangles.          (line  22)
+* remove-particle-emitter:               Particles.           (line 129)
+* run-game:                              Kernel.              (line  28)
+* run-game <1>:                          Kernel.              (line  72)
+* schedule-after:                        Agendas.             (line  66)
+* schedule-at:                           Agendas.             (line  63)
+* schedule-every:                        Agendas.             (line  70)
+* script:                                Scripts.             (line  49)
+* script-cancelled?:                     Scripts.             (line  55)
+* script-complete?:                      Scripts.             (line  61)
+* script-running?:                       Scripts.             (line  58)
+* script?:                               Scripts.             (line  52)
+* set-rect-height!:                      Rectangles.          (line 120)
+* set-rect-width!:                       Rectangles.          (line 117)
+* set-rect-x!:                           Rectangles.          (line 111)
+* set-rect-y!:                           Rectangles.          (line 114)
+* set-sprite-batch-texture!:             Sprites.             (line  59)
+* set-vec2!:                             Vectors.             (line  84)
+* set-vec2-x!:                           Vectors.             (line  78)
+* set-vec2-y!:                           Vectors.             (line  81)
+* set-vec3!:                             Vectors.             (line 154)
+* set-vec3-x!:                           Vectors.             (line 145)
+* set-vec3-y!:                           Vectors.             (line 148)
+* set-vec3-z!:                           Vectors.             (line 151)
+* shader-attributes:                     Shaders.             (line  90)
+* shader-uniform:                        Shaders.             (line  84)
+* shader-uniforms:                       Shaders.             (line  87)
+* shader?:                               Shaders.             (line  78)
+* sleep:                                 Scripts.             (line  71)
+* slide:                                 Grid.                (line  83)
+* smoothstep:                            Easings.             (line  17)
+* spawn-script:                          Scripts.             (line  46)
+* split-texture:                         Textures.            (line  63)
+* sprite-batch-add!:                     Sprites.             (line  62)
+* sprite-batch-clear!:                   Sprites.             (line  73)
+* sprite-batch-texture:                  Sprites.             (line  56)
+* sprite-batch?:                         Sprites.             (line  53)
+* strings->shader:                       Shaders.             (line  65)
+* texture-atlas-ref:                     Textures.            (line  82)
+* texture-atlas-texture:                 Textures.            (line  78)
+* texture-atlas?:                        Textures.            (line  75)
+* texture-height:                        Textures.            (line  54)
+* texture-mag-filter:                    Textures.            (line  33)
+* texture-min-filter:                    Textures.            (line  29)
+* texture-parent:                        Textures.            (line  25)
+* texture-region?:                       Textures.            (line  22)
+* texture-width:                         Textures.            (line  51)
+* texture-wrap-s:                        Textures.            (line  37)
+* texture-wrap-t:                        Textures.            (line  47)
+* texture?:                              Textures.            (line  19)
+* tile-animation:                        Tile Maps.           (line  95)
+* tile-id:                               Tile Maps.           (line  92)
+* tile-layer-height:                     Tile Maps.           (line 125)
+* tile-layer-name:                       Tile Maps.           (line 119)
+* tile-layer-properties:                 Tile Maps.           (line 131)
+* tile-layer-tiles:                      Tile Maps.           (line 128)
+* tile-layer-width:                      Tile Maps.           (line 122)
+* tile-layer?:                           Tile Maps.           (line 116)
+* tile-map-height:                       Tile Maps.           (line  25)
+* tile-map-layers:                       Tile Maps.           (line  37)
+* tile-map-orientation:                  Tile Maps.           (line  19)
+* tile-map-properties:                   Tile Maps.           (line  40)
+* tile-map-tile-height:                  Tile Maps.           (line  31)
+* tile-map-tile-width:                   Tile Maps.           (line  28)
+* tile-map-tilesets:                     Tile Maps.           (line  34)
+* tile-map-width:                        Tile Maps.           (line  22)
+* tile-map?:                             Tile Maps.           (line  16)
+* tile-properties:                       Tile Maps.           (line  98)
+* tile?:                                 Tile Maps.           (line  89)
+* tileset-atlas:                         Tile Maps.           (line  77)
+* tileset-first-gid:                     Tile Maps.           (line  65)
+* tileset-name:                          Tile Maps.           (line  62)
+* tileset-properties:                    Tile Maps.           (line  83)
+* tileset-size:                          Tile Maps.           (line  68)
+* tileset-tile-height:                   Tile Maps.           (line  74)
+* tileset-tile-width:                    Tile Maps.           (line  71)
+* tileset-tiles:                         Tile Maps.           (line  80)
+* tileset?:                              Tile Maps.           (line  59)
+* transform!:                            Matrices.            (line 114)
+* tween:                                 Tweening.            (line  16)
+* uniform-default-value:                 Shaders.             (line 105)
+* uniform-name:                          Shaders.             (line  96)
+* uniform-type:                          Shaders.             (line  99)
+* uniform-value:                         Shaders.             (line 102)
+* uniform?:                              Shaders.             (line  93)
+* update-agenda:                         Agendas.             (line  60)
+* update-particles:                      Particles.           (line  95)
+* vec2:                                  Vectors.             (line  37)
+* vec2*:                                 Vectors.             (line  74)
+* vec2+:                                 Vectors.             (line  66)
+* vec2-:                                 Vectors.             (line  70)
+* vec2-add!:                             Vectors.             (line  91)
+* vec2-clamp-to-rect!:                   Rectangles.          (line 151)
+* vec2-copy:                             Vectors.             (line  54)
+* vec2-copy!:                            Vectors.             (line  88)
+* vec2-dot-product:                      Vectors.             (line  60)
+* vec2-magnitude:                        Vectors.             (line  57)
+* vec2-mult!:                            Vectors.             (line  99)
+* vec2-normalize:                        Vectors.             (line  63)
+* vec2-sub!:                             Vectors.             (line  95)
+* vec2-x:                                Vectors.             (line  48)
+* vec2-y:                                Vectors.             (line  51)
+* vec2/polar:                            Vectors.             (line  40)
+* vec2?:                                 Vectors.             (line  45)
+* vec3:                                  Vectors.             (line 106)
+* vec3*:                                 Vectors.             (line 141)
+* vec3+:                                 Vectors.             (line 133)
+* vec3-:                                 Vectors.             (line 137)
+* vec3-add!:                             Vectors.             (line 161)
+* vec3-copy:                             Vectors.             (line 121)
+* vec3-copy!:                            Vectors.             (line 158)
+* vec3-dot-product:                      Vectors.             (line 127)
+* vec3-magnitude:                        Vectors.             (line 124)
+* vec3-mult!:                            Vectors.             (line 169)
+* vec3-normalize:                        Vectors.             (line 130)
+* vec3-sub!:                             Vectors.             (line 165)
+* vec3-x:                                Vectors.             (line 112)
+* vec3-y:                                Vectors.             (line 115)
+* vec3-z:                                Vectors.             (line 118)
+* vec3?:                                 Vectors.             (line 109)
+* vertex-array-attributes:               Buffers.             (line 273)
+* vertex-array-indices:                  Buffers.             (line 270)
+* vertex-array-mode:                     Buffers.             (line 277)
+* vertex-array?:                         Buffers.             (line 267)
+* viewport-clear-color:                  Viewports.           (line  43)
+* viewport-clear-flags:                  Viewports.           (line  46)
+* viewport-height:                       Viewports.           (line  40)
+* viewport-width:                        Viewports.           (line  37)
+* viewport-x:                            Viewports.           (line  31)
+* viewport-y:                            Viewports.           (line  34)
+* viewport?:                             Viewports.           (line  28)
+* with-agenda:                           Agendas.             (line  54)
+* with-blend-mode:                       Rendering Engine.    (line  76)
+* with-depth-test:                       Rendering Engine.    (line  80)
+* with-framebuffer:                      Rendering Engine.    (line  72)
+* with-mapped-buffer:                    Buffers.             (line 159)
+* with-mapped-buffer-view:               Buffers.             (line 232)
+* with-projection:                       Rendering Engine.    (line  88)
+* with-texture:                          Rendering Engine.    (line  84)
+* with-viewport:                         Rendering Engine.    (line  68)
+* yield:                                 Scripts.             (line  67)
+
+
+
+Tag Table:
+Node: Top908
+Node: Installation1879
+Node: Requirements2450
+Node: API Reference3044
+Node: Kernel3440
+Node: Math14592
+Node: Basics15513
+Node: Vectors15961
+Node: Rectangles21481
+Node: Grid26593
+Node: Matrices30379
+Node: Quaternions34742
+Node: Easings35801
+Node: Bezier Curves36908
+Node: Path Finding38975
+Node: Graphics42106
+Node: Textures43445
+Node: Sprites46406
+Node: Tile Maps51519
+Node: Lines and Shapes56111
+Node: Fonts58213
+Node: Particles59915
+Node: Blending65124
+Node: Framebuffers66042
+Node: Viewports67645
+Node: Rendering Engine69410
+Node: Buffers72929
+Node: Shaders83010
+Node: Scripting86830
+Node: Agendas87813
+Node: Scripts90768
+Node: Tweening93704
+Node: Channels94950
+Node: Copying This Manual96370
+Node: GNU Free Documentation License96610
+Node: Index121726
+
+End Tag Table

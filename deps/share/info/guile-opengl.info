@@ -1,0 +1,178 @@
+This is guile-opengl.info, produced by makeinfo version 6.6 from
+guile-opengl.texi.
+
+This manual is for Guile-OpenGL (version 0.1.0, updated 15 June 2019)
+
+   Copyright (C) 2014 Free Software Foundation, Inc.  and others.
+
+     Guile-OpenGL is free software: you can redistribute and/or modify
+     it and its documentation under the terms of the GNU Lesser General
+     Public License as published by the Free Software Foundation, either
+     version 3 of the License, or (at your option) any later version.
+
+     Guile-OpenGL is distributed in the hope that it will be useful, but
+     WITHOUT ANY WARRANTY; without even the implied warranty of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+     Lesser General Public License for more details.
+
+     You should have received a copy of the GNU Lesser General Public
+     License along with this program.  If not, see
+     <http://www.gnu.org/licenses/>.
+
+   Portions of this document were generated from the upstream OpenGL
+documentation.  The work as a whole is redistributable under the license
+above.  Sections containing generated documentation are prefixed with a
+specific copyright header.
+INFO-DIR-SECTION The Algorithmic Language Scheme
+START-INFO-DIR-ENTRY
+* opengl: (guile-opengl).              OpenGL for Guile.
+* gl: (guile-opengl)GL.                A Scheme interface to the OpenGL API.
+* glx: (guile-opengl)GLX.              Using OpenGL with the X Window System.
+* glu: (guile-opengl)GLU.              The GL Utility library.
+* glut: (guile-opengl)GLUT.            The GL Utility Toolkit.
+END-INFO-DIR-ENTRY
+
+
+Indirect:
+guile-opengl.info-1: 1599
+guile-opengl.info-2: 328210
+guile-opengl.info-3: 1192602
+guile-opengl.info-4: 1195735
+guile-opengl.info-5: 1320893
+
+Tag Table:
+(Indirect)
+Node: Top1599
+Node: Introduction3264
+Node: About3767
+Node: API Conventions5574
+Node: Enumerations6272
+Node: Functions7851
+Node: GL9486
+Node: About OpenGL10012
+Node: GL Contexts12899
+Node: Rendering14881
+Node: GL API17611
+Node: OpenGL Operation18114
+Node: Rasterization22587
+Node: Per Fragment Operations22747
+Node: Special Functions26957
+Node: State and State Requests27137
+Node: GL Enumerations27578
+Node: Low-Level GL328210
+Node: GL Extensions1192602
+Node: GLU1195735
+Node: GLU API1195971
+Node: Initialization1196373
+Node: Mipmapping1196499
+Node: Matrix Manipulation1196645
+Node: Polygon Tesselation1197215
+Node: Quadrics1197382
+Node: NURBS1197513
+Node: Errors1197625
+Node: Low-Level GLU1197722
+Node: GLX1320893
+Node: GLX API1321186
+Node: GLX Enumerations1321474
+Node: Low-Level GLX1332383
+Node: GLUT1416438
+Node: GLUT Initialization1417008
+Ref: set-initial-display-mode1417158
+Ref: set-initial-window-position1417203
+Ref: set-initial-window-size1417250
+Ref: initialize-glut1417302
+Node: Beginning Event Processing1417403
+Ref: glut-main-loop1417593
+Node: Window Management1417623
+Ref: window-id1417794
+Ref: window-live?1417819
+Ref: window?1417847
+Ref: set-window-cursor!1417870
+Ref: set-window-icon-title!1417918
+Ref: set-window-title!1417967
+Ref: show-window1418011
+Ref: sub-window?1418047
+Ref: swap-buffers1418081
+Ref: top-level-window?1418118
+Ref: with-window1418158
+Ref: with-window*1418205
+Ref: make-sub-window1418237
+Ref: make-window1418292
+Ref: pop-window1418323
+Ref: position-window1418349
+Ref: post-redisplay1418391
+Ref: push-window1418430
+Ref: reshape-window1418457
+Ref: current-window1418507
+Ref: destroy-window1418537
+Ref: full-screen1418574
+Ref: hide-window1418621
+Ref: iconify-window1418657
+Node: Overlay Management1418696
+Node: Menu Management1418858
+Node: Callback Registration1419018
+Ref: set-button-box-callback1419203
+Ref: set-current-window1419247
+Ref: set-dials-callback1419288
+Ref: set-display-callback1419327
+Ref: set-entry-callback1419368
+Ref: set-idle-callback1419407
+Ref: set-keyboard-callback1419445
+Ref: set-menu-status-callback1419487
+Ref: set-motion-callback1419532
+Ref: set-mouse-callback1419572
+Ref: set-overlay-display-callback1419611
+Ref: set-passive-motion-callback1419660
+Ref: set-reshape-callback1419708
+Ref: set-spaceball-button-callback1419749
+Ref: set-spaceball-motion-callback1419799
+Ref: set-spaceball-rotate-callback1419849
+Ref: set-special-callback1419899
+Ref: set-tablet-button-callback1419940
+Ref: set-tablet-motion-callback1419987
+Ref: set-visibility-callback1420034
+Ref: add-timer-callback1420078
+Node: Color Index Colormap Management1420129
+Node: State Retrieval1420334
+Ref: window-alpha-size1420500
+Ref: window-blue-size1420540
+Ref: window-color-buffer-size1420579
+Ref: window-colormap-size1420626
+Ref: window-depth-buffer-size1420669
+Ref: window-double-buffered?1420716
+Ref: window-green-size1420762
+Ref: window-height1420802
+Ref: window-number-of-children1420837
+Ref: window-number-of-samples1420885
+Ref: window-parent1420932
+Ref: window-position1420968
+Ref: window-red-size1421006
+Ref: window-size1421044
+Ref: window-stencil-buffer-size1421078
+Ref: window-stereo?1421127
+Ref: window-rgba?1421164
+Ref: window-width1421198
+Ref: window-x1421232
+Ref: window-y1421262
+Ref: screen-height1421292
+Ref: screen-height-mm1421321
+Ref: screen-size1421353
+Ref: screen-size-mm1421380
+Ref: screen-width1421410
+Ref: screen-width-mm1421438
+Ref: display-mode-possible?1421469
+Ref: initial-display-mode1421507
+Ref: initial-window-height1421543
+Ref: initial-window-position1421580
+Ref: initial-window-size1421619
+Ref: initial-window-width1421654
+Ref: initial-window-x1421690
+Ref: initial-window-y1421722
+Ref: elapsed-time1421754
+Node: Font Rendering1421782
+Node: Geometric Object Rendering1421941
+Node: GNU General Public License1422102
+Node: GNU Lesser General Public License1459691
+Node: Function Index1468195
+
+End Tag Table

@@ -1,3 +1,6 @@
+(set! %load-compiled-path (append %load-compiled-path
+                                  '("deps/lib/guile/2.2/site-ccache")))
+
 (use-modules
  (system repl coop-server)
  (ice-9 pretty-print)
